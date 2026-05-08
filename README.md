@@ -7,8 +7,8 @@ Lokaler macOS-Daemon (Node.js und TypeScript), der den aktuell in Apple Music la
 - macOS (Apple Silicon oder Intel)
 - Node.js 22 LTS oder neuer (`node --version`)
 - Apple Music plus [NepTunes](https://micropixels.software/apps/neptunes) als Last.fm-Scrobbler
-- Last.fm-Account mit API-Key
-- Gather-Space mit API-Key
+- Last.fm-Account mit API-Key (optional, ohne Last.fm fällt der Daemon auf AppleScript-only zurück)
+- GatherV2-Desktop-App (`app.v2.gather.town`) installiert, Account-Login funktioniert
 
 ## Setup
 
@@ -18,13 +18,13 @@ Lokaler macOS-Daemon (Node.js und TypeScript), der den aktuell in Apple Music la
    npm install
    ```
 
-2. `.env`-Datei aus Vorlage erzeugen und mit API-Keys füllen:
+2. `.env`-Datei aus Vorlage erzeugen:
 
    ```bash
    cp .env.example .env
    ```
 
-   Editor öffnen, alle vier Keys eintragen: `LASTFM_API_KEY`, `LASTFM_USER`, `GATHER_API_KEY`, `GATHER_SPACE_ID`.
+   Optional: Last.fm-Vars (`LASTFM_API_KEY`, `LASTFM_USER`) eintragen, falls Last.fm als Now-Playing-Source genutzt werden soll. Ohne sie läuft der Daemon AppleScript-only. Beide Felder müssen entweder beide gesetzt oder beide leer sein.
 
 3. Daemon installieren (Build, launchd-Plist und TCC-Permission):
 
@@ -35,6 +35,28 @@ Lokaler macOS-Daemon (Node.js und TypeScript), der den aktuell in Apple Music la
    Während des Installs erscheint einmalig ein macOS-Dialog "Terminal möchte Music steuern". Klick "OK", sonst kann der Daemon Apple Music nicht via AppleScript abfragen (siehe Troubleshooting).
 
 4. Fertig. Bei jedem Login startet die Bridge automatisch im Hintergrund.
+
+## GatherV2 mit Debug-Flag starten
+
+Die Bridge spricht ab Phase 5 nicht mehr das Gather-1.0-WebSocket-Protokoll, sondern steuert die lokal laufende GatherV2-Electron-App via Chrome-DevTools-Protocol (CDP). Voraussetzung dafür: die App muss mit dem Debug-Port-Flag gestartet sein.
+
+**Einmalige Test-Session:**
+
+```bash
+open -a GatherV2 --args --remote-debugging-port=9222
+```
+
+Login im Space, dann verifizieren:
+
+```bash
+npm run check-cdp
+```
+
+Erwartete Ausgabe: `✅ GatherV2-Page erreichbar: https://app.v2.gather.town/...`.
+
+**Persistente Lösung (empfohlen):** GatherV2 als Login-Item mit dem Flag eintragen. Aktuell out-of-scope der v1, manuell oder via separater Phase v2.1.
+
+**Wenn der Flag fehlt:** Der Daemon loggt beim ersten Tick `[gather] no GatherV2 page found at localhost:9222` und überspringt den Tick. Beim nächsten Tick (10s später) versucht er es erneut. Kein Crash.
 
 ## Daemon-Steuerung
 
@@ -105,18 +127,36 @@ Die Plist nutzt `KeepAlive: { SuccessfulExit: false, Crashed: true }` plus `Thro
 
 Wenn der Daemon trotzdem in Loops läuft: `npm run uninstall-daemon` und Logs analysieren.
 
+### CDP nicht erreichbar oder GatherV2-Page nicht gefunden
+
+1. `npm run check-cdp` ausführen — der Helper sagt dir präzise, welcher der zwei Failure-Modes vorliegt:
+   - **CDP-Port `localhost:9222` antwortet nicht** -> GatherV2 läuft nicht oder wurde ohne `--remote-debugging-port`-Flag gestartet. Lösung:
+     ```bash
+     # GatherV2 sauber beenden, dann:
+     open -a GatherV2 --args --remote-debugging-port=9222
+     ```
+   - **Port antwortet, aber keine `app.v2.gather.town`-Page** -> App ist auf Login-Page oder du bist ausgeloggt. Im UI einloggen und in den Space gehen.
+
+2. Falls du einen anderen Port nutzen willst (z.B. wenn 9222 belegt ist):
+   ```bash
+   open -a GatherV2 --args --remote-debugging-port=9333
+   # in der .env:
+   GATHER_CDP_PORT=9333
+   ```
+
 ### Audit-Warnungen (`npm audit`)
 
-`@gathertown/gather-game-client` zieht alte Versionen von `axios` und `protobufjs` (CVE-Findings). Das Tool ist Single-User, kontaktiert nur Last.fm und Gather, hat keine User-Inputs in URLs oder Bodies, die Warnings sind hier ohne praktische Konsequenz.
+Vor Phase 5 zog der alte Gather-Game-Client alte axios- und protobufjs-Versionen mit CVE-Findings ein. Mit dem CDP-Refactor ist diese Dependency raus, `npm audit` sollte deutlich ruhiger sein. `chrome-remote-interface` ist gut gepflegt; falls dort eigene Audit-Hits auftauchen, lokal prüfen — das Tool ist Single-User und kontaktiert keine User-kontrollierten URLs.
 
 ## Architektur
 
-- `src/index.ts` ist der Daemon-Entrypoint (WebSocket-Polyfill, Sink-Connect, Signal-Handler, Polling-Loop, Last-Word-Log)
+- `src/index.ts` ist der Daemon-Entrypoint (Sink-Connect, Signal-Handler, Polling-Loop, Last-Word-Log)
 - `src/sources/` enthält Last.fm und AppleScript Now-Playing-Sources mit AppleScript als Authority für Play und Pause
-- `src/sink/` enthält den Gather-WebSocket-Wrapper (`setEmojiStatus` plus `setTextStatus`)
+- `src/sink/` enthält den CDP-Wrapper gegen die GatherV2-Electron-App (`setCustomStatus` und `clearCustomStatus` via Chrome-DevTools-Protocol)
 - `src/loop.ts` ist der 10s-Polling-Loop mit recursive `setTimeout`, AbortController und Track-Diff
 - `scripts/install-daemon.ts` generiert die launchd-Plist und spielt sie ein
 - `scripts/uninstall-daemon.ts` entfernt die Plist und stoppt den Daemon
+- `scripts/check-cdp.ts` ist der CDP-Pre-Flight-Helper (`npm run check-cdp`)
 - `scripts/lib/plist.ts` ist der Plist-XML-Template-Renderer
 
 ## Lizenz
