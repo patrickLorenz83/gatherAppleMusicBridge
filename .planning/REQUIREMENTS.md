@@ -23,11 +23,11 @@
 
 ### Polling-Loop und Diff
 
-- [ ] **LOOP-01**: Polling-Loop läuft alle 10 Sekunden, implementiert über rekursives `setTimeout` mit `AbortController` (nicht `setInterval`)
-- [ ] **LOOP-02**: Track-Diff über Composite-Key `${artist}|${track}` (lowercase, trimmed), kein redundantes setStatus bei gleichem Track
-- [ ] **LOOP-03**: Try/Catch um jeden Tick, einzelner Last.fm- oder AppleScript-Fehler crasht den Daemon nicht
-- [ ] **LOOP-04**: SIGTERM/SIGINT-Handler räumt Gather-Status (5s-Timeout-Race) und exited mit `process.exit(0)`
-- [ ] **LOOP-05**: `unhandledRejection`/`uncaughtException`-Handler nutzt `pino.final()` für synchronen Last-Word-Log
+- [x] **LOOP-01**: Polling-Loop läuft alle 10 Sekunden, implementiert über rekursives `setTimeout` mit `AbortController` (nicht `setInterval`)
+- [x] **LOOP-02**: Track-Diff über Composite-Key `${artist}|${track}` (lowercase, trimmed), kein redundantes setStatus bei gleichem Track
+- [x] **LOOP-03**: Try/Catch um jeden Tick, einzelner Last.fm- oder AppleScript-Fehler crasht den Daemon nicht
+- [x] **LOOP-04**: SIGTERM/SIGINT-Handler räumt Gather-Status (5s-Timeout-Race) und exited mit `process.exit(0)`
+- [x] **LOOP-05**: `unhandledRejection`/`uncaughtException`-Handler nutzt `pino.final()` für synchronen Last-Word-Log
 
 ### Konfiguration und Logging
 
@@ -99,11 +99,11 @@ Reaktiv nach v1, basierend auf Live-Erfahrung.
 | SINK-03 | Phase 1 | Complete |
 | SINK-04 | Phase 1 | Complete |
 | SINK-05 | Phase 1 | Complete |
-| LOOP-01 | Phase 3 | Pending |
-| LOOP-02 | Phase 3 | Pending |
-| LOOP-03 | Phase 3 | Pending |
-| LOOP-04 | Phase 3 | Pending |
-| LOOP-05 | Phase 3 | Pending |
+| LOOP-01 | Phase 3 | Complete |
+| LOOP-02 | Phase 3 | Complete |
+| LOOP-03 | Phase 3 | Complete |
+| LOOP-04 | Phase 3 | Complete |
+| LOOP-05 | Phase 3 | Complete |
 | CFG-01 | Phase 1 | Complete |
 | CFG-02 | Phase 1 | Complete |
 | CFG-03 | Phase 1 | Complete |

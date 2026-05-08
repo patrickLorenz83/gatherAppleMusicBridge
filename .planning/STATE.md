@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-last_updated: "2026-05-08T16:35:10.288Z"
+status: "Phase-3-Code (Polling-Loop und Daemon-Verdrahtung) 100% komplett. Alle 5 LOOP-Requirements erfüllt, tsc clean. Optionaler manueller End-to-End-Smoke-Test (`npx tsx src/index.ts`) ist User-Action."
+last_updated: "2026-05-08T16:52:25Z"
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 5
   percent: 100
 ---
 
@@ -26,9 +26,9 @@ progress:
 
 ## Current Position
 
-- **Phase:** 2 (Now-Playing-Sources) — Code abgeschlossen, Phase-2-Verifier offen
-- **Plan:** 02-02 abgeschlossen (Source-Chain-Composer). Plan 02-01 abgeschlossen (Source-Adapter Last.fm + AppleScript).
-- **Status:** Phase-2-Code 100% komplett, alle 5 Phase-2-Requirements (SRC-01..05) erfüllt. Optionaler Live-Smoke-Test `npm run test:sources` ist User-Action (TCC-Permission-Trigger beim ersten Apple-Music-Run).
+- **Phase:** 3 (Polling-Loop und Daemon-Verdrahtung) — Code abgeschlossen, Phase-3-Verifier offen
+- **Plan:** 03-01 abgeschlossen (Polling-Loop, Track-Diff, Daemon-Entrypoint mit Signal-Handlern und Last-Word-Log).
+- **Status:** Phase-3-Code 100% komplett, alle 5 Phase-3-Requirements (LOOP-01..05) erfüllt. Optionaler manueller End-to-End-Smoke-Test (`npx tsx src/index.ts`) ist User-Action.
 - **Progress:** [██████████] 100%
 
 ```
@@ -37,7 +37,7 @@ progress:
 
 ## Current Focus
 
-**Next action:** Phase-2-Verifier ausführen (`/gsd-verify-phase 2`). Verifier muss `human_verification`-Block in `02-VERIFICATION.md` aufnehmen für die drei optionalen Smoke-Test-Läufe (Music.app spielt / pausiert / geschlossen).
+**Next action:** Phase-3-Verifier ausführen (`/gsd-verify-phase 3`). Verifier prüft alle 5 LOOP-Requirements in `src/diff.ts`, `src/loop.ts`, `src/index.ts` und nimmt einen `human_verification`-Block in `03-VERIFICATION.md` für den optionalen End-to-End-Smoke-Test (`npx tsx src/index.ts`) auf.
 
 **Phase 2 scope reminder:**
 
@@ -52,9 +52,9 @@ progress:
 
 ## Performance Metrics
 
-- **Phases completed:** 0 (Phase 1 + Phase 2 Code 100%, Verifier offen)
-- **Plans completed:** 4
-- **Requirements validated:** 14/27 (CFG-01..04, SINK-01..05, SRC-01..05)
+- **Phases completed:** 0 (Phases 1+2+3 Code 100%, Verifier offen)
+- **Plans completed:** 5
+- **Requirements validated:** 19/27 (CFG-01..04, SINK-01..05, SRC-01..05, LOOP-01..05)
 - **Time elapsed since init:** 0d
 
 | Plan | Duration | Tasks | Files |
@@ -63,6 +63,8 @@ progress:
 | Phase 01 P02 | 3min | 3 tasks | 3 files |
 | Phase 2 P01 | 3min | 4 tasks | 6 files |
 | Phase 2 P02 | 2min | 2 tasks | 3 files |
+| Phase 3 P01 (Polling-Loop, Daemon) | 5min | 3 tasks | 3 files |
+| Phase 03 P01 | 5min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -120,6 +122,18 @@ progress:
 | Separate Commits feat/chore für `scripts/test-sources.ts` und `package.json` | Einzeln revertierbar — Script-Body und npm-Script-Eintrag sind konzeptuell getrennt. |
 | `pino`-Logger im Smoke-Test statt `console.log` | Konsistent mit Phase-1 `test-sink.ts`; Redaction-Strategy greift auch hier. |
 
+### Execution Decisions (Plan 03-01)
+
+| Decision | Rationale |
+|----------|-----------|
+| `pino.final()` durch `finalFatal()`-Helper mit `log.flushSync()` ersetzt | API ist in pino 10.x entfernt (siehe pino transports docs). Helper schreibt `log.fatal(...)` synchron via `flushSync()` — funktional äquivalent für SonicBoom-Default-Destination. |
+| `shutdown()`: `exit(0)` auch bei Cleanup-Fehler oder 5s-Timeout | launchd in Phase 4 nutzt `KeepAlive: { SuccessfulExit: false, Crashed: true }` — `exit(1)` bei Cleanup-Hänger würde unerwünschten Restart triggern. |
+| Polling-Intervall hardcoded `10_000` ms in `loop.ts` | v1 Single-User-Tool, kein Env-Var-Variabilitätsbedarf. Last.fm Rate-Limit (5/s/IP) ist weit drüber. |
+| `runLoop` nicht async, erster Tick fire-and-forget via `void tick()` | Caller (`main()`) registriert Signal-Handler ohne auf erstes Polling-Ergebnis zu warten. |
+| Doppel-Signal-Schutz via `shuttingDown`-Flag | Doppel-Ctrl-C oder zweites SIGTERM während Shutdown würde sonst zweite `shutdown()`-Invocation auslösen — `sink.disconnect()` doppelt awaitet (Race). |
+| `abort.signal.addEventListener("abort", ...)` mit `{ once: true }` cleart pending Timer | Memory-Leak-Prävention bei langlaufendem Daemon; Listener-Lifecycle endet mit erstem abort-Event. |
+| Polyfill `import "./setup-ws.js";` als Zeile 1 (defensiv, gather.ts importiert es schon) | Pitfall 4: Belt-and-suspenders gegen versehentliches Reimporten/Reordering in Future-Refactors. |
+
 ### Active TODOs
 
 - **Phase-1-Verifier:** Muss `human_verification`-Block für deferred Task 4 (visueller Smoke-Test im Gather-Browser-Tab) in `01-VERIFICATION.md` aufnehmen. ~30s User-Action nach `.env`-Setup.
@@ -140,24 +154,24 @@ None.
 
 ### Last session
 
-**2026-05-08T16:33 — Phase 2 (Plans 02-01 + 02-02) ausgeführt:**
+**2026-05-08T16:52 — Phase 3 (Plan 03-01) ausgeführt:**
 
-- Plan 02-01 (Source-Adapter): 4 Tasks, 5 atomic Commits
-  - `6e6cbd4` run-applescript@^7.1.0 als Runtime-Dep
-  - `2a7b842` PlayerState-Type
-  - `d3d42e0` NowPlayingSource + AppleScriptResult
-  - `ea40810` Last.fm-Adapter (native fetch + Zod + @attr.nowplaying)
-  - `16eab56` AppleScript-Adapter (System-Events-Outer-Guard + Player-State-Authority + TCC-Error)
-- Plan 02-02 (Source-Chain-Composer): 2 Tasks, 3 atomic Commits
-  - `40ae3e6` getNowPlaying-Composer (chain.ts)
-  - `5131647` scripts/test-sources.ts Smoke-Test
-  - `06262f4` package.json test:sources-Script
-- API-Verifikation `run-applescript@7`: `runAppleScript(script, options?): Promise<string>` matcht 1:1 (Named Export, kein Default).
-- `npx tsc -p . --noEmit` clean nach jedem Task.
-- 02-01-SUMMARY und 02-02-SUMMARY mit Self-Check: PASSED geschrieben.
-- ROADMAP.md Phase 2 Plan-Counter via `roadmap.update-plan-progress` aktualisiert.
-- REQUIREMENTS.md SRC-01..05 als done markiert (14/27 — alle 14 Phase-1+2-Reqs erfüllt).
-- 0 Deviations: Plans 1:1 ausgeführt.
+- Plan 03-01 (Polling-Loop und Daemon-Verdrahtung): 3 Tasks, 3 atomic Commits
+  - `a8ae8ff` `feat(03-01): add nowPlayingKey composite-key for track-diff (LOOP-02)` — `src/diff.ts`
+  - `edc74c8` `feat(03-01): add runLoop with recursive setTimeout, AbortController and per-tick try/catch (LOOP-01, LOOP-02, LOOP-03)` — `src/loop.ts`
+  - `da1e540` `feat(03-01): wire daemon entrypoint with signal handlers, last-word-log and shutdown-race (LOOP-04, LOOP-05)` — `src/index.ts`
+- `npx tsc -p . --noEmit` clean nach jedem Task (alle drei Phasen zusammen).
+- 03-01-SUMMARY mit Self-Check: PASSED geschrieben.
+- ROADMAP.md Phase 3 Plan-Counter via `roadmap.update-plan-progress 03` aktualisiert (Status: Complete).
+- REQUIREMENTS.md LOOP-01..05 als done markiert (19/27).
+- 4 Deviations (auto-fixed): NowPlaying-Import-Pfad-Bug, setInterval-Substring im Doku-Kommentar, pino.final-API-Drift in pino 10.x, Polyfill-Import-Reihenfolge für Plan-Verify-Konformität. Alle dokumentiert in 03-01-SUMMARY.
+
+**Pre-existing:**
+
+- 2026-05-08T16:33 — Phase 2 (Plans 02-01 + 02-02) ausgeführt
+- 2026-05-08T16:09 — Plan 01-02 ausgeführt (GatherSink + Smoke-Test; 3 Tasks)
+- 2026-05-08T16:02 — Plan 01-01 ausgeführt (Foundation, Config, Logger; 7 Tasks)
+- Initialization session 2026-05-08 (PROJECT, REQUIREMENTS, Research, ROADMAP, STATE)
 
 **Pre-existing:**
 
@@ -170,8 +184,9 @@ None.
 1. **User (falls noch nicht geschehen):** `cp .env.example .env` und mit echten Keys füllen.
 2. **Claude:** `/gsd-verify-phase 1` (Phase-1-Verifier, mit `human_verification`-Block für visuellen Smoke-Test).
 3. **Claude:** `/gsd-verify-phase 2` (Phase-2-Verifier, mit `human_verification`-Block für drei optionale `npm run test:sources`-Läufe).
-4. Nach erfolgreichen Verifier-Runs: `/gsd-execute-phase 3` (Polling-Loop, der `getNowPlaying` alle 10s konsumiert und in den GatherSink schreibt).
+4. **Claude:** `/gsd-verify-phase 3` (Phase-3-Verifier, mit `human_verification`-Block für optionalen End-to-End-Smoke-Test `npx tsx src/index.ts`).
+5. Nach erfolgreichen Verifier-Runs: `/gsd-execute-phase 4` (launchd-Wrapper und Installation: Plist-Generator, Install-Script, TCC-Permission-Trigger).
 
 ---
 *State initialized: 2026-05-08*
-*Last execution: 2026-05-08 (Plan 02-02 — Phase 2 abgeschlossen)*
+*Last execution: 2026-05-08 (Plan 03-01 — Phase 3 abgeschlossen)*

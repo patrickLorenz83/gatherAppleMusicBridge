@@ -58,7 +58,8 @@ Die Phasen folgen einer **Risk-First-Reihenfolge**, nicht dem Daten-Fluss "Quell
   3. Ein einzelner Last.fm-503 oder AppleScript-Permission-Fehler crasht den Daemon nicht — der nächste Tick läuft normal weiter (Try/Catch um jeden Tick).
   4. Ctrl-C im Foreground oder `kill -TERM <pid>` führt zu sauberem Shutdown: Status wird mit 5s-Timeout-Race geleert, Prozess exited mit 0.
   5. Eine unhandled Promise Rejection oder uncaughtException schreibt einen synchronen Last-Word-Log (via `pino.final()`), bevor der Prozess terminiert — kein stiller Tod.
-**Plans**: TBD
+**Plans**: 1 plan
+  - [x] 03-01-PLAN.md — Polling-Loop (diff, recursive-setTimeout, AbortController), Daemon-Entrypoint mit Signal-Handlern und pino.final-Last-Word-Log
 
 ### Phase 4: launchd-Installation
 **Goal**: Bridge läuft als unsichtbarer Background-Daemon, der bei Login automatisch startet, bei Crash neu gestartet wird (aber nicht bei Config-Fehlern), und Logs in `~/Library/Logs/gather-bridge.{log,err}` schreibt.
@@ -78,7 +79,7 @@ Die Phasen folgen einer **Risk-First-Reihenfolge**, nicht dem Daten-Fluss "Quell
 |-------|----------------|--------|-----------|
 | 1. Foundation und Gather-Sink | 1/2 | In Progress|  |
 | 2. Now-Playing-Sources | 2/2 | Complete   | 2026-05-08 |
-| 3. Polling-Loop und Daemon-Verdrahtung | 0/0 | Not started | - |
+| 3. Polling-Loop und Daemon-Verdrahtung | 0/1 | Not started | - |
 | 4. launchd-Installation | 0/0 | Not started | - |
 
 ## Coverage Map
