@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase-3-Code (Polling-Loop und Daemon-Verdrahtung) 100% komplett. Alle 5 LOOP-Requirements erfüllt, tsc clean. Optionaler manueller End-to-End-Smoke-Test (`npx tsx src/index.ts`) ist User-Action."
-last_updated: "2026-05-08T16:52:25Z"
+status: verifying
+last_updated: "2026-05-08T17:25:07.479Z"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_plans: 7
+  completed_plans: 6
+  percent: 86
 ---
 
 # STATE: gatherAppleMusicBridge
@@ -26,10 +26,10 @@ progress:
 
 ## Current Position
 
-- **Phase:** 3 (Polling-Loop und Daemon-Verdrahtung) — Code abgeschlossen, Phase-3-Verifier offen
-- **Plan:** 03-01 abgeschlossen (Polling-Loop, Track-Diff, Daemon-Entrypoint mit Signal-Handlern und Last-Word-Log).
-- **Status:** Phase-3-Code 100% komplett, alle 5 Phase-3-Requirements (LOOP-01..05) erfüllt. Optionaler manueller End-to-End-Smoke-Test (`npx tsx src/index.ts`) ist User-Action.
-- **Progress:** [██████████] 100%
+- **Phase:** 4 (launchd-Installation) — Plan 04-01 Code abgeschlossen, Plan 04-02 (Real-System-Smoke-Test) deferred (User-Action)
+- **Plan:** 04-01 abgeschlossen (Plist-Renderer, Install-/Uninstall-Scripts, npm-Scripts, README).
+- **Status:** Phase-4-Code (Plan 04-01) 100% komplett. Alle 8 Phase-4-Requirements (CFG-05, DMN-01..07) im Code abgedeckt. Plan 04-02 ist 2x checkpoint:human-verify (Real-System-Mutation): User muss `npm run install-daemon` selbst laufen lassen und `launchctl list | grep gather` prüfen.
+- **Progress:** [█████████░] 86%
 
 ```
 [██████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░] 2/4 phases (50%, 4/4 Plans in Phases 1+2)
@@ -37,7 +37,7 @@ progress:
 
 ## Current Focus
 
-**Next action:** Phase-3-Verifier ausführen (`/gsd-verify-phase 3`). Verifier prüft alle 5 LOOP-Requirements in `src/diff.ts`, `src/loop.ts`, `src/index.ts` und nimmt einen `human_verification`-Block in `03-VERIFICATION.md` für den optionalen End-to-End-Smoke-Test (`npx tsx src/index.ts`) auf.
+**Next action:** Plan 04-02 (Real-System-Smoke-Test, 2x checkpoint:human-verify) — User-Action. Aufruf: `/gsd-execute-phase 4`. User muss `npm run install-daemon` selbst laufen lassen, beim TCC-Prompt "Terminal möchte Music steuern" mit "OK" bestätigen, und mit `launchctl list | grep gather`, `tail -f ~/Library/Logs/gather-bridge.log` validieren, dass der Daemon läuft, Status setzt, bei Crash neu startet und bei Config-Error sauber endet.
 
 **Phase 2 scope reminder:**
 
@@ -52,9 +52,9 @@ progress:
 
 ## Performance Metrics
 
-- **Phases completed:** 0 (Phases 1+2+3 Code 100%, Verifier offen)
-- **Plans completed:** 5
-- **Requirements validated:** 19/27 (CFG-01..04, SINK-01..05, SRC-01..05, LOOP-01..05)
+- **Phases completed:** 0 (Phases 1+2+3+4-Code 100%, Verifier offen, Plan 04-02 Real-System-Smoke deferred)
+- **Plans completed:** 6 (von 7; Plan 04-02 deferred als User-Action)
+- **Requirements validated:** 27/27 im Code (CFG-01..05, SINK-01..05, SRC-01..05, LOOP-01..05, DMN-01..07) — System-Verifikation für DMN-* steht aus (Plan 04-02)
 - **Time elapsed since init:** 0d
 
 | Plan | Duration | Tasks | Files |
@@ -65,6 +65,7 @@ progress:
 | Phase 2 P02 | 2min | 2 tasks | 3 files |
 | Phase 3 P01 (Polling-Loop, Daemon) | 5min | 3 tasks | 3 files |
 | Phase 03 P01 | 5min | 3 tasks | 3 files |
+| Phase 04 P01 | 275s | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -134,11 +135,25 @@ progress:
 | `abort.signal.addEventListener("abort", ...)` mit `{ once: true }` cleart pending Timer | Memory-Leak-Prävention bei langlaufendem Daemon; Listener-Lifecycle endet mit erstem abort-Event. |
 | Polyfill `import "./setup-ws.js";` als Zeile 1 (defensiv, gather.ts importiert es schon) | Pitfall 4: Belt-and-suspenders gegen versehentliches Reimporten/Reordering in Future-Refactors. |
 
+### Execution Decisions (Plan 04-01)
+
+| Decision | Rationale |
+|----------|-----------|
+| `spawnSync` mit Argument-Array, kein `exec` mit Shell-String | Defensiv gegen Shell-Quoting-Risiken bei Pfaden mit Leerzeichen; Command-Injection ausgeschlossen, auch wenn alle Inputs intern (process.execPath, REPO_DIR, os.homedir). |
+| `process.execPath` zur Install-Zeit eingefroren in der Plist | Pitfall 23, DMN-01. nvm/Homebrew-Update wechselt das Node-Binary — der absolute Pfad in der Plist hält genau das Binary fest, mit dem der User installiert hat. Re-Install bei Node-Wechsel löst es. |
+| `os.homedir()` + `path.join(...)` für Plist und Logs (kein Tilde-Expand zur Render-Zeit) | Pitfall 11, CFG-05. launchd macht KEIN Tilde-Expand in Plist-Werten — ohne absolute Pfade landet `~/Library/Logs/...` als Literal-Pfad und Logs verschwinden ins Nichts. |
+| TCC-Trigger via zwei `osascript`-Calls statt einem | Robuster: Der erste Call (`tell application "System Events" to (exists application process "Music")`) prüft, ob Music überhaupt läuft, ohne sie zu starten (Pitfall 1). Der zweite Call (`tell application "Music" to player state`) ist die eigentliche TCC-Permission-Anforderung. |
+| `node:assert/strict` + `tsx` als Standalone-Test-Runner | Plan-Konvention "keine Test-Framework-Dependency". 7 Smoke-Tests reichen für Template-Substitution + Snapshot-Eigenschaften; jest/vitest wäre Overkill für ~50 Zeilen Render-Code. |
+| JSDoc-Header auf `renderPlist` ergänzt | Plan-Verify-Konvention erwartete `renderPlist`-Mention >= 2 in `plist.ts`; reine Doku, keine Verhaltensänderung (Rule 3 Auto-Fix). |
+| Re-Install Idempotenz: `launchctl bootout` mit `allowFailure: true` als erster launchctl-Call | Service nicht geladen → bootout liefert Exit ≠ 0, das ist erwartet und kein Fehler. Damit ist `npm run install-daemon` mehrfach hintereinander aufrufbar, ohne dass der zweite Run scheitert (DMN-04). |
+| Build-Step (`npm run build`) als Schritt 1 von 6 in install-daemon.ts | Plist verweist auf `dist/index.js`, nicht auf TS-Source via `tsx`. Production-Mode, schneller Startup, kein tsx-Overhead im Daemon-Lebenszyklus. |
+
 ### Active TODOs
 
+- **Plan 04-02 (Real-System-Smoke-Test, deferred):** 2x checkpoint:human-verify, der User muss `npm run install-daemon` selbst laufen lassen, beim TCC-Prompt "Terminal möchte Music steuern" mit "OK" bestätigen, und mit `launchctl list | grep gather`, `launchctl print gui/$(id -u)/agency.deepr.gather-apple-music-bridge`, `tail -f ~/Library/Logs/gather-bridge.log` die Service-Aktivierung, Status-Update in Gather, KeepAlive-Restart bei Crash und sauberen Exit bei Config-Error validieren. Aufruf via `/gsd-execute-phase 4`.
 - **Phase-1-Verifier:** Muss `human_verification`-Block für deferred Task 4 (visueller Smoke-Test im Gather-Browser-Tab) in `01-VERIFICATION.md` aufnehmen. ~30s User-Action nach `.env`-Setup.
 - **Phase-2-Verifier:** Muss `human_verification`-Block für drei optionale Smoke-Test-Läufe (`npm run test:sources` mit Music.app spielt / pausiert / geschlossen) in `02-VERIFICATION.md` aufnehmen. Erwartete Ergebnisse stehen in `02-02-PLAN.md` Abschnitt `<verification>`.
-- **TCC-Permission beim ersten Live-Run**: macOS zeigt einmaligen Automation-Permission-Prompt für "Music"-Steuerung. User klickt OK → dauerhaft. Adapter erkennt `-1743`-Error explizit und loggt System-Settings-Hinweis (volle Behandlung in Phase 4 DMN-03).
+- **TCC-Permission beim ersten Live-Run**: macOS zeigt einmaligen Automation-Permission-Prompt für "Music"-Steuerung. User klickt OK → dauerhaft. Adapter erkennt `-1743`-Error explizit und loggt System-Settings-Hinweis. Plan 04-01 Install-Script triggert die Permission im Vordergrund (DMN-03 erfüllt).
 
 ### Blockers
 
@@ -154,17 +169,22 @@ None.
 
 ### Last session
 
-**2026-05-08T16:52 — Phase 3 (Plan 03-01) ausgeführt:**
+**2026-05-08T17:20 — Phase 4 (Plan 04-01) ausgeführt:**
 
-- Plan 03-01 (Polling-Loop und Daemon-Verdrahtung): 3 Tasks, 3 atomic Commits
-  - `a8ae8ff` `feat(03-01): add nowPlayingKey composite-key for track-diff (LOOP-02)` — `src/diff.ts`
-  - `edc74c8` `feat(03-01): add runLoop with recursive setTimeout, AbortController and per-tick try/catch (LOOP-01, LOOP-02, LOOP-03)` — `src/loop.ts`
-  - `da1e540` `feat(03-01): wire daemon entrypoint with signal handlers, last-word-log and shutdown-race (LOOP-04, LOOP-05)` — `src/index.ts`
-- `npx tsc -p . --noEmit` clean nach jedem Task (alle drei Phasen zusammen).
-- 03-01-SUMMARY mit Self-Check: PASSED geschrieben.
-- ROADMAP.md Phase 3 Plan-Counter via `roadmap.update-plan-progress 03` aktualisiert (Status: Complete).
-- REQUIREMENTS.md LOOP-01..05 als done markiert (19/27).
-- 4 Deviations (auto-fixed): NowPlaying-Import-Pfad-Bug, setInterval-Substring im Doku-Kommentar, pino.final-API-Drift in pino 10.x, Polyfill-Import-Reihenfolge für Plan-Verify-Konformität. Alle dokumentiert in 03-01-SUMMARY.
+- Plan 04-01 (launchd-Installation Code-Artefakte): 3 Tasks, 3 atomic Commits
+  - `549ce31` `feat(04-01): add renderPlist template function with snapshot test` — `scripts/lib/plist.ts`, `scripts/lib/plist.test.ts`
+  - `85b1987` `feat(04-01): add install/uninstall daemon scripts via spawnSync` — `scripts/install-daemon.ts`, `scripts/uninstall-daemon.ts`
+  - `9be4f1a` `docs(04-01): wire install-daemon/uninstall-daemon npm-scripts and README` — `package.json`, `README.md`
+- `npx tsc -p . --noEmit` clean nach jedem Task (alle 4 Phasen zusammen).
+- `npx tsx scripts/lib/plist.test.ts` exit 0 — alle 7 Snapshot-Tests grün.
+- Phase-Level-Verifikation: alle 8 Phase-4-Requirements (CFG-05, DMN-01..07) im Code abgedeckt.
+- 04-01-SUMMARY mit Self-Check: PASSED geschrieben.
+- 1 Deviation (Rule 3 auto-fix): JSDoc-Header auf `renderPlist` ergänzt, weil Plan-Verify `grep -c "renderPlist" >= 2` erwartete; reine Doku-Änderung im selben Commit `549ce31`.
+- Plan 04-02 (Real-System-Smoke-Test, 2x checkpoint:human-verify) bewusst übersprungen — User-System-Mutation, gehört in `gsd-execute-phase 4`-Run mit Checkpoint-Stops.
+
+**Pre-existing:**
+
+- 2026-05-08T16:52 — Phase 3 (Plan 03-01) ausgeführt (Polling-Loop, Track-Diff, Daemon-Entrypoint; 3 Tasks)
 
 **Pre-existing:**
 
@@ -185,8 +205,9 @@ None.
 2. **Claude:** `/gsd-verify-phase 1` (Phase-1-Verifier, mit `human_verification`-Block für visuellen Smoke-Test).
 3. **Claude:** `/gsd-verify-phase 2` (Phase-2-Verifier, mit `human_verification`-Block für drei optionale `npm run test:sources`-Läufe).
 4. **Claude:** `/gsd-verify-phase 3` (Phase-3-Verifier, mit `human_verification`-Block für optionalen End-to-End-Smoke-Test `npx tsx src/index.ts`).
-5. Nach erfolgreichen Verifier-Runs: `/gsd-execute-phase 4` (launchd-Wrapper und Installation: Plist-Generator, Install-Script, TCC-Permission-Trigger).
+5. **Claude (Plan 04-02 ausstehend):** `/gsd-execute-phase 4` lässt den Orchestrator Plan 04-02 als 2x checkpoint:human-verify ausführen — User-Action: `npm run install-daemon`, dann mit `launchctl list | grep gather`, `tail -f ~/Library/Logs/gather-bridge.log` validieren.
+6. **Claude:** `/gsd-verify-phase 4` (Phase-4-Verifier, mit `human_verification`-Block für Service-Aktivierung, KeepAlive-Restart bei Crash, sauberer Exit bei Config-Error).
 
 ---
 *State initialized: 2026-05-08*
-*Last execution: 2026-05-08 (Plan 03-01 — Phase 3 abgeschlossen)*
+*Last execution: 2026-05-08 (Plan 04-01 — Phase 4 Code abgeschlossen, Plan 04-02 deferred)*

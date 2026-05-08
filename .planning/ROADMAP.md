@@ -71,7 +71,9 @@ Die Phasen folgen einer **Risk-First-Reihenfolge**, nicht dem Daten-Fluss "Quell
   3. Bei Config-Fehler (z. B. fehlender API-Key) exited der Daemon mit Code 0 und wird nicht in eine Endlosschleife restartet — `KeepAlive: { SuccessfulExit: false, Crashed: true }` plus `ThrottleInterval: 30`.
   4. AppleScript-Fallback funktioniert auch unter dem launchd-spawned Daemon, weil das Install-Script die TCC-Automation-Permission im Vordergrund initial getriggert hat.
   5. `npm run uninstall-daemon` ruft `launchctl bootout` und löscht die Plist; nach `bootout` setzt der Daemon keinen Gather-Status mehr und startet nicht beim nächsten Login.
-**Plans**: TBD
+**Plans**: 2 plans
+  - [x] 04-01-PLAN.md — Plist-Renderer, Install-/Uninstall-Scripts, npm-Scripts und README (autonomous, snapshot-verifiziert)
+  - [ ] 04-02-PLAN.md — Real-System-Smoke-Test (User führt install/uninstall aus, verifiziert TCC, launchctl, Logs, Crash-Loop-Schutz)
 
 ## Progress
 

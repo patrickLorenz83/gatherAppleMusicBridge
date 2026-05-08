@@ -35,17 +35,17 @@
 - [x] **CFG-02**: `.env` ist in `.gitignore` (vor erstem Commit), `.env.example` ist committet
 - [x] **CFG-03**: Config-Loader validiert alle Env-Variablen mit Zod, beendet bei Fehlern mit `process.exit(0)` (nicht 1) gegen KeepAlive-Loop
 - [x] **CFG-04**: Pino-Logger mit Redaction für API-Keys (kein Token in Logs)
-- [ ] **CFG-05**: Logs gehen nach stderr/stdout, launchd routet zu `~/Library/Logs/gather-bridge.{log,err}`
+- [x] **CFG-05**: Logs gehen nach stderr/stdout, launchd routet zu `~/Library/Logs/gather-bridge.{log,err}`
 
 ### Daemon-Installation (launchd)
 
-- [ ] **DMN-01**: `npm run install-daemon` rendert Plist-Template mit absolutem Node-Pfad (`process.execPath`) und schreibt nach `~/Library/LaunchAgents/`
-- [ ] **DMN-02**: Plist verwendet `KeepAlive: { SuccessfulExit: false, Crashed: true }` plus `ThrottleInterval: 30` (kein Endlos-Loop)
-- [ ] **DMN-03**: Install-Script triggert AppleScript-TCC-Permission im Vordergrund (`osascript -e 'tell application "Music" to player state'`), damit der Daemon-Fallback nicht silent failed
-- [ ] **DMN-04**: Install-Script ruft modernes `launchctl bootstrap`/`enable`/`kickstart` (nicht deprecated `load`)
-- [ ] **DMN-05**: `npm run uninstall-daemon` ruft symmetrisches `launchctl bootout` und löscht die Plist
-- [ ] **DMN-06**: Daemon startet automatisch beim Login (RunAtLoad in Plist)
-- [ ] **DMN-07**: Plist setzt `WorkingDirectory: <repo>` damit `dotenv` die `.env` findet
+- [x] **DMN-01**: `npm run install-daemon` rendert Plist-Template mit absolutem Node-Pfad (`process.execPath`) und schreibt nach `~/Library/LaunchAgents/`
+- [x] **DMN-02**: Plist verwendet `KeepAlive: { SuccessfulExit: false, Crashed: true }` plus `ThrottleInterval: 30` (kein Endlos-Loop)
+- [x] **DMN-03**: Install-Script triggert AppleScript-TCC-Permission im Vordergrund (`osascript -e 'tell application "Music" to player state'`), damit der Daemon-Fallback nicht silent failed
+- [x] **DMN-04**: Install-Script ruft modernes `launchctl bootstrap`/`enable`/`kickstart` (nicht deprecated `load`)
+- [x] **DMN-05**: `npm run uninstall-daemon` ruft symmetrisches `launchctl bootout` und löscht die Plist
+- [x] **DMN-06**: Daemon startet automatisch beim Login (RunAtLoad in Plist)
+- [x] **DMN-07**: Plist setzt `WorkingDirectory: <repo>` damit `dotenv` die `.env` findet
 
 ## v2 Requirements
 
@@ -108,14 +108,14 @@ Reaktiv nach v1, basierend auf Live-Erfahrung.
 | CFG-02 | Phase 1 | Complete |
 | CFG-03 | Phase 1 | Complete |
 | CFG-04 | Phase 1 | Complete |
-| CFG-05 | Phase 4 | Pending |
-| DMN-01 | Phase 4 | Pending |
-| DMN-02 | Phase 4 | Pending |
-| DMN-03 | Phase 4 | Pending |
-| DMN-04 | Phase 4 | Pending |
-| DMN-05 | Phase 4 | Pending |
-| DMN-06 | Phase 4 | Pending |
-| DMN-07 | Phase 4 | Pending |
+| CFG-05 | Phase 4 | Complete |
+| DMN-01 | Phase 4 | Complete |
+| DMN-02 | Phase 4 | Complete |
+| DMN-03 | Phase 4 | Complete |
+| DMN-04 | Phase 4 | Complete |
+| DMN-05 | Phase 4 | Complete |
+| DMN-06 | Phase 4 | Complete |
+| DMN-07 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 27 total
