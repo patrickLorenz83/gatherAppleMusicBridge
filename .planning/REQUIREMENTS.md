@@ -15,11 +15,11 @@
 
 ### Sink (Gather-Status)
 
-- [ ] **SINK-01**: Bridge connected zu Gather via `@gathertown/gather-game-client` (WebSocket, nicht HTTP)
-- [ ] **SINK-02**: WebSocket-Polyfill (`globalThis.WebSocket = WS`) wird in einem Side-Effect-Modul **vor** Game-Client-Import gesetzt
-- [ ] **SINK-03**: Bridge setzt Gather-Status via `setEmojiStatus` (♫) + `setTextStatus` (`Artist – Track`)
-- [ ] **SINK-04**: Bridge leert Gather-Status (`setTextStatus("")`), wenn Apple Music pausiert oder gestoppt ist
-- [ ] **SINK-05**: GatherSink-Wrapper exposed nur `connect`, `setStatus`, `clearStatus` mit eigenem `connected`-Flag
+- [x] **SINK-01**: Bridge connected zu Gather via `@gathertown/gather-game-client` (WebSocket, nicht HTTP)
+- [x] **SINK-02**: WebSocket-Polyfill (`globalThis.WebSocket = WS`) wird in einem Side-Effect-Modul **vor** Game-Client-Import gesetzt
+- [x] **SINK-03**: Bridge setzt Gather-Status via `setEmojiStatus` (♫) + `setTextStatus` (`Artist – Track`)
+- [x] **SINK-04**: Bridge leert Gather-Status (`setTextStatus("")`), wenn Apple Music pausiert oder gestoppt ist
+- [x] **SINK-05**: GatherSink-Wrapper exposed nur `connect`, `setStatus`, `clearStatus` mit eigenem `connected`-Flag
 
 ### Polling-Loop und Diff
 
@@ -94,11 +94,11 @@ Reaktiv nach v1, basierend auf Live-Erfahrung.
 | SRC-03 | Phase 2 | Pending |
 | SRC-04 | Phase 2 | Pending |
 | SRC-05 | Phase 2 | Pending |
-| SINK-01 | Phase 1 | Pending |
-| SINK-02 | Phase 1 | Pending |
-| SINK-03 | Phase 1 | Pending |
-| SINK-04 | Phase 1 | Pending |
-| SINK-05 | Phase 1 | Pending |
+| SINK-01 | Phase 1 | Complete |
+| SINK-02 | Phase 1 | Complete |
+| SINK-03 | Phase 1 | Complete |
+| SINK-04 | Phase 1 | Complete |
+| SINK-05 | Phase 1 | Complete |
 | LOOP-01 | Phase 3 | Pending |
 | LOOP-02 | Phase 3 | Pending |
 | LOOP-03 | Phase 3 | Pending |

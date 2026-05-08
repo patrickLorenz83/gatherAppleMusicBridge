@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Roadmap initialized, awaiting `/gsd-plan-phase 1`
-last_updated: "2026-05-08T16:04:31.242Z"
+status: completed
+last_updated: "2026-05-08T16:12:21.434Z"
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 50
+  completed_plans: 2
+  percent: 100
 ---
 
 # STATE: gatherAppleMusicBridge
@@ -26,39 +26,40 @@ progress:
 
 ## Current Position
 
-- **Phase:** 1 (Foundation und Gather-Sink) — In Progress
-- **Plan:** 01-01 abgeschlossen (Foundation, Config, Logger). Nächster Plan: 01-02 (Gather-Sink + Smoke-Test).
-- **Status:** Plan 01-01 done; User muss `.env` aus `.env.example` kopieren und mit echten Werten füllen, BEVOR Plan 01-02 läuft.
-- **Progress:** [█████░░░░░] 50% (1/2 Plans in Phase 1)
+- **Phase:** 1 (Foundation und Gather-Sink) — Code abgeschlossen, Phase-1-Verifier offen
+- **Plan:** 01-02 abgeschlossen (3/4 Tasks ✅ — Code; 1/4 deferred = `checkpoint:human-verify`).
+- **Status:** Phase-1-Code 100% komplett, alle 9 Phase-1-Requirements (CFG-01..04, SINK-01..05) erfüllt. Visueller Smoke-Test (Task 4) ist User-Action und muss vom Phase-1-Verifier in `human_verification`-Block aufgenommen werden.
+- **Progress:** [██████████] 100% (2/2 Plans in Phase 1)
 
 ```
-[█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0/4 phases (0%, 1/2 Plans in Phase 1)
+[█████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 1/4 phases (25%, 2/2 Plans in Phase 1)
 ```
 
 ## Current Focus
 
-**Next action:** User legt `.env` mit echten Keys an (siehe `01-01-SUMMARY.md` → User Setup Required). Dann `/gsd-execute-phase 1` für Plan 01-02 (Gather-Sink Smoke-Test).
+**Next action:** Phase-1-Verifier ausführen (`/gsd-verify-phase 1`). Verifier muss den `human_verification`-Block in `01-VERIFICATION.md` aufnehmen für den deferred Task 4 (visueller Smoke-Test gegen Gather-Browser-Tab nach `.env`-Setup).
 
 **Phase 1 scope reminder:**
 
 - ~~Repo-Init mit `.gitignore`-First, `.env.example`, `tsconfig.json`, ESM-`package.json`~~ ✅ Plan 01-01
 - ~~`src/types.ts`, `src/config.ts` (Zod), `src/logger.ts` (pino mit Redaction)~~ ✅ Plan 01-01
-- `src/setup-ws.ts` (Polyfill-Side-Effect-Modul, Pflicht vor Game-Client-Import) — Plan 01-02
-- `src/sink/gather.ts` mit `GatherSink`-Klasse — Plan 01-02
-- `scripts/test-sink.ts` Smoke-Test mit hardcoded Track gegen echtes Gather-Space — Plan 01-02
+- ~~`src/setup-ws.ts` (Polyfill-Side-Effect-Modul, Pflicht vor Game-Client-Import)~~ ✅ Plan 01-02
+- ~~`src/sink/gather.ts` mit `GatherSink`-Klasse~~ ✅ Plan 01-02
+- ~~`scripts/test-sink.ts` Smoke-Test mit hardcoded Track gegen echtes Gather-Space~~ ✅ Plan 01-02 (Code; visuelle Verifikation = `human_verification` durch User)
 
-**Highest risk in Phase 1:** WebSocket-Polyfill-Reihenfolge (Pitfall 4) und `subscribeToConnection`-Lifecycle des `gather-game-client@43` (undokumentiert). Smoke-Test ist Pflicht, bevor Phase 2 startet.
+**Highest risk in Phase 1:** WebSocket-Polyfill-Reihenfolge (Pitfall 4) und `subscribeToConnection`-Lifecycle des `gather-game-client@43`. **Risiko gemindert:** Polyfill-Reihenfolge ist im Code dokumentiert + tsc-clean; `subscribeToConnection` aus 43.0.1 verifiziert (gibt Unsubscribe zurück, async `disconnect`).
 
 ## Performance Metrics
 
-- **Phases completed:** 0
-- **Plans completed:** 1
-- **Requirements validated:** 4/27 (CFG-01..04)
+- **Phases completed:** 0 (Phase 1 Code 100%, Verifier offen)
+- **Plans completed:** 2
+- **Requirements validated:** 9/27 (CFG-01..04, SINK-01..05)
 - **Time elapsed since init:** 0d
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 (Foundation, Config, Logger) | 2m 53s | 7 | 8 |
+| Phase 01 P02 | 3min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -85,9 +86,20 @@ progress:
 | Boot-Pfad logger-frei (config.ts schreibt direkt auf stderr) | Verhindert Circular-Dep-Risiko, deterministische Boot-Reihenfolge |
 | Keine `pino-pretty` Dep | User kann ad-hoc via `npx pino-pretty` rendern |
 
+### Execution Decisions (Plan 01-02)
+
+| Decision | Rationale |
+|----------|-----------|
+| `game.disconnect()` async (`Promise<void>`), nicht synchron | Verifiziert in `node_modules/@gathertown/gather-game-client/dist/src/Game.d.ts:92` — Plan-Skelett-Annahme war falsch. Smoke-Test `awaitet` jetzt; Phase 3 SIGTERM-Handler MUSS ebenso. |
+| `sendAction({$case: "setEmojiStatus", ...})` statt `game.setEmojiStatus(...)` | Folgt offiziellem Reference-Repo-Pattern aus `mod-spotify-as-status`, explizit auf der WebSocket-Wire (debuggbar). High-Level-Methoden existieren auch, aber wir bleiben Reference-Repo-konform. |
+| Connect-Timeout fest auf 10s mit Promise-Reject | T-02-04-Mitigation: Smoke-Test/Phase-3-Loop hängt nicht beim Boot, sondern crashed mit Stack-Trace. Caller entscheidet über Recovery. |
+| `setStatus`/`clearStatus` werfen NICHT bei `!connected` (nur Warning) | Defensiv: Caller (Phase-3-Loop) soll nicht crashen, wenn Sink temporär down ist. Reconnect ist v2 (ROBUST-02). |
+| `NonNullable<NowPlaying>` als `setStatus`-Parameter (nicht `NowPlaying`) | Klarer Vertrag: Caller filtert `null` vorher und entscheidet zwischen `setStatus` ODER `clearStatus`. |
+
 ### Active TODOs
 
-- **Vor Plan 01-02:** User muss `.env` aus `.env.example` mit echten Werten anlegen (LASTFM_API_KEY, LASTFM_USER, GATHER_API_KEY, GATHER_SPACE_ID).
+- **Phase-1-Verifier:** Muss `human_verification`-Block für deferred Task 4 (visueller Smoke-Test im Gather-Browser-Tab) in `01-VERIFICATION.md` aufnehmen. ~30s User-Action nach `.env`-Setup.
+- **User vor Phase-1-Verifier:** `.env` aus `.env.example` mit echten Keys anlegen, falls noch nicht geschehen — sonst kann visueller Smoke-Test nicht laufen.
 
 ### Blockers
 
@@ -103,23 +115,27 @@ None.
 
 ### Last session
 
-**2026-05-08T16:02 — Plan 01-01 ausgeführt:**
+**2026-05-08T16:09 — Plan 01-02 ausgeführt:**
 
-- 7 Tasks atomic committet (`e445ad2` `.gitignore`, `cf86ec0` `.env.example`, `951d116` `package.json`, `9cd5712` `tsconfig`, `1cad0e7` `types.ts`, `06f54e9` `config.ts`, `4de8662` `logger.ts`)
-- `npm install` für 6 Runtime + 4 Dev-Deps erfolgreich, `package-lock.json` committet
-- `npx tsc -p . --noEmit` clean
-- `01-01-SUMMARY.md` geschrieben mit Self-Check: PASSED
-- ROADMAP.md Phase 1 Plan-Counter geupdated (1/2)
-- REQUIREMENTS.md CFG-01..04 als done markiert (4/27)
-- Keine Deviations, keine Blocker
+- 3 Tasks atomic committet (`a923331` `setup-ws.ts`, `765096f` `sink/gather.ts`, `057a208` `test-sink.ts`)
+- Task 4 (`checkpoint:human-verify`) deferred — visueller Smoke-Test ist User-Action nach `.env`-Setup, kann nicht autonom ausgeführt werden
+- API-Verifikation gegen `node_modules/@gathertown/gather-game-client@43.0.1`: `disconnect()` ist async (Plan-Skelett-Korrektur), `subscribeToConnection` gibt Unsubscribe zurück, `sendAction({$case})`-Pattern bestätigt
+- `npx tsc -p . --noEmit` clean nach jedem Task
+- `01-02-SUMMARY.md` geschrieben mit Self-Check: PASSED
+- ROADMAP.md Phase 1 Plan-Counter geupdated (2/2 → Complete)
+- REQUIREMENTS.md SINK-01..05 als done markiert (9/27 — alle 9 Phase-1-Reqs erfüllt)
+- 1 Deviation: Rule-1-Bug Plan-Skelett-Korrektur (sync→async disconnect)
 
-**Pre-existing:** Initialization session 2026-05-08 (PROJECT, REQUIREMENTS, Research, ROADMAP, STATE)
+**Pre-existing:**
+- 2026-05-08T16:02 — Plan 01-01 ausgeführt (Foundation, Config, Logger; 7 Tasks)
+- Initialization session 2026-05-08 (PROJECT, REQUIREMENTS, Research, ROADMAP, STATE)
 
 ### Resume on next session
 
-1. **User:** `cp .env.example .env` und mit echten Keys füllen (siehe `01-01-SUMMARY.md` → User Setup Required).
-2. **Claude:** `/gsd-execute-phase 1` (Plan 01-02: Gather-Sink + Smoke-Test).
+1. **User (falls noch nicht geschehen):** `cp .env.example .env` und mit echten Keys füllen.
+2. **Claude:** `/gsd-verify-phase 1` (Phase-1-Verifier, mit `human_verification`-Block für visuellen Smoke-Test).
+3. Nach erfolgreichem Phase-1-Verifier: `/gsd-execute-phase 2` (Sources: Last.fm + AppleScript-Fallback).
 
 ---
 *State initialized: 2026-05-08*
-*Last execution: 2026-05-08 (Plan 01-01)*
+*Last execution: 2026-05-08 (Plan 01-02)*
