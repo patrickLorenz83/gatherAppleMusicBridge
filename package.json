@@ -12,7 +12,8 @@
     "build": "tsc -p .",
     "start": "node dist/index.js",
     "typecheck": "tsc -p . --noEmit",
-    "test:sink": "tsx scripts/test-sink.ts"
+    "test:sink": "tsx scripts/test-sink.ts",
+    "test:sources": "tsx scripts/test-sources.ts"
   },
   "dependencies": {
     "@gathertown/gather-game-client": "^43.0.1",
