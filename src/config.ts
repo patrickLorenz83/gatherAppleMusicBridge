@@ -2,17 +2,30 @@ import "dotenv/config";
 import { z } from "zod";
 
 /**
- * Zod-Schema für die 4 Pflicht-Env-Vars (siehe CFG-01).
+ * Zod-Schema für Env-Vars.
  *
- * Alle als `min(1)`, weil leerer String genauso schlecht wie fehlend ist —
- * dotenv liefert leere Strings für definierte aber leere Keys (KEY=).
+ * Gather-Keys sind Pflicht (Sink ohne sie sinnlos).
+ * Last.fm-Keys sind optional: wenn beide leer/fehlend sind, läuft die
+ * Source-Chain ausschließlich über AppleScript gegen Music.app. Beide müssen
+ * konsistent gesetzt sein — entweder beide oder keiner.
  */
-const EnvSchema = z.object({
-  LASTFM_API_KEY: z.string().min(1, "LASTFM_API_KEY fehlt oder ist leer"),
-  LASTFM_USER: z.string().min(1, "LASTFM_USER fehlt oder ist leer"),
-  GATHER_API_KEY: z.string().min(1, "GATHER_API_KEY fehlt oder ist leer"),
-  GATHER_SPACE_ID: z.string().min(1, "GATHER_SPACE_ID fehlt oder ist leer"),
-});
+const EnvSchema = z
+  .object({
+    LASTFM_API_KEY: z.string().optional().default(""),
+    LASTFM_USER: z.string().optional().default(""),
+    GATHER_API_KEY: z.string().min(1, "GATHER_API_KEY fehlt oder ist leer"),
+    GATHER_SPACE_ID: z.string().min(1, "GATHER_SPACE_ID fehlt oder ist leer"),
+  })
+  .refine(
+    (data) =>
+      (data.LASTFM_API_KEY === "" && data.LASTFM_USER === "") ||
+      (data.LASTFM_API_KEY !== "" && data.LASTFM_USER !== ""),
+    {
+      message:
+        "LASTFM_API_KEY und LASTFM_USER müssen beide gesetzt oder beide leer sein",
+      path: ["LASTFM_API_KEY"],
+    },
+  );
 
 export type Config = z.infer<typeof EnvSchema>;
 

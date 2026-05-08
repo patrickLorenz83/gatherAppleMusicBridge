@@ -47,6 +47,12 @@ const RecentTracksResponseSchema = z.object({
 });
 
 export async function getLastFmNowPlaying(): Promise<NowPlaying> {
+  // Last.fm ist optional: bei leeren Keys einfach null zurückgeben,
+  // damit die Source-Chain auf AppleScript zurückfällt.
+  if (!config.LASTFM_API_KEY || !config.LASTFM_USER) {
+    return null;
+  }
+
   try {
     const url = new URL("https://ws.audioscrobbler.com/2.0/");
     url.search = new URLSearchParams({
