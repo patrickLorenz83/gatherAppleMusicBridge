@@ -89,39 +89,45 @@ Reaktiv nach v1, basierend auf Live-Erfahrung.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SRC-01 | TBD | Pending |
-| SRC-02 | TBD | Pending |
-| SRC-03 | TBD | Pending |
-| SRC-04 | TBD | Pending |
-| SRC-05 | TBD | Pending |
-| SINK-01 | TBD | Pending |
-| SINK-02 | TBD | Pending |
-| SINK-03 | TBD | Pending |
-| SINK-04 | TBD | Pending |
-| SINK-05 | TBD | Pending |
-| LOOP-01 | TBD | Pending |
-| LOOP-02 | TBD | Pending |
-| LOOP-03 | TBD | Pending |
-| LOOP-04 | TBD | Pending |
-| LOOP-05 | TBD | Pending |
-| CFG-01 | TBD | Pending |
-| CFG-02 | TBD | Pending |
-| CFG-03 | TBD | Pending |
-| CFG-04 | TBD | Pending |
-| CFG-05 | TBD | Pending |
-| DMN-01 | TBD | Pending |
-| DMN-02 | TBD | Pending |
-| DMN-03 | TBD | Pending |
-| DMN-04 | TBD | Pending |
-| DMN-05 | TBD | Pending |
-| DMN-06 | TBD | Pending |
-| DMN-07 | TBD | Pending |
+| SRC-01 | Phase 2 | Pending |
+| SRC-02 | Phase 2 | Pending |
+| SRC-03 | Phase 2 | Pending |
+| SRC-04 | Phase 2 | Pending |
+| SRC-05 | Phase 2 | Pending |
+| SINK-01 | Phase 1 | Pending |
+| SINK-02 | Phase 1 | Pending |
+| SINK-03 | Phase 1 | Pending |
+| SINK-04 | Phase 1 | Pending |
+| SINK-05 | Phase 1 | Pending |
+| LOOP-01 | Phase 3 | Pending |
+| LOOP-02 | Phase 3 | Pending |
+| LOOP-03 | Phase 3 | Pending |
+| LOOP-04 | Phase 3 | Pending |
+| LOOP-05 | Phase 3 | Pending |
+| CFG-01 | Phase 1 | Pending |
+| CFG-02 | Phase 1 | Pending |
+| CFG-03 | Phase 1 | Pending |
+| CFG-04 | Phase 1 | Pending |
+| CFG-05 | Phase 4 | Pending |
+| DMN-01 | Phase 4 | Pending |
+| DMN-02 | Phase 4 | Pending |
+| DMN-03 | Phase 4 | Pending |
+| DMN-04 | Phase 4 | Pending |
+| DMN-05 | Phase 4 | Pending |
+| DMN-06 | Phase 4 | Pending |
+| DMN-07 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 27 total
-- Mapped to phases: 0 (filled by roadmapper)
-- Unmapped: 27 ⚠️ (will be resolved by roadmap)
+- Mapped to phases: 27
+- Unmapped: 0
+
+**Phase Distribution:**
+- Phase 1 (Foundation und Gather-Sink): 9 requirements (SINK-01..05, CFG-01..04)
+- Phase 2 (Now-Playing-Sources): 5 requirements (SRC-01..05)
+- Phase 3 (Polling-Loop und Daemon-Verdrahtung): 5 requirements (LOOP-01..05)
+- Phase 4 (launchd-Installation): 8 requirements (CFG-05, DMN-01..07)
 
 ---
 *Requirements defined: 2026-05-08*
-*Last updated: 2026-05-08 after initial definition*
+*Last updated: 2026-05-08 after roadmap creation (traceability mapped to phases)*
