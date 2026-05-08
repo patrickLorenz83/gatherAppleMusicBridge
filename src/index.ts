@@ -1,8 +1,3 @@
-import "./setup-ws.js";
-// ^^^ LOOP-05/Pitfall 4: Polyfill als ALLERERSTER Import, vor jedem Modul, das
-// gather-game-client transitiv lädt. gather.ts importiert setup-ws.js bereits
-// selbst — defensive Doppel-Import ist günstig (idempotent, setzt globalThis nur einmal).
-
 import { config } from "./config.js";
 import { log } from "./logger.js";
 import { GatherSink } from "./sink/gather.js";
@@ -53,7 +48,7 @@ async function shutdown(
     await Promise.race([
       (async () => {
         try {
-          sink.clearStatus();
+          await sink.clearStatus();
         } catch (err) {
           log.warn({ err }, "[shutdown] clearStatus threw");
         }
@@ -79,7 +74,10 @@ async function shutdown(
 async function main(): Promise<void> {
   log.info("[daemon] starting gatherAppleMusicBridge");
 
-  const sink = new GatherSink(config.GATHER_SPACE_ID, config.GATHER_API_KEY);
+  const sink = new GatherSink({
+    port: Number(config.GATHER_CDP_PORT),
+    pageUrlFilter: config.GATHER_PAGE_URL_FILTER,
+  });
   await sink.connect();
   log.info("[daemon] sink connected");
 

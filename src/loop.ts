@@ -42,9 +42,9 @@ export function runLoop(
       if (key !== lastKey) {
         log.info({ from: lastKey, to: key }, "[loop] track changed");
         if (np === null) {
-          sink.clearStatus();
+          await sink.clearStatus();
         } else {
-          sink.setStatus(np);
+          await sink.setStatus(np);
         }
         lastKey = key;
       }
