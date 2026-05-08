@@ -19,6 +19,7 @@ Die Phasen folgen einer **Risk-First-Reihenfolge**, nicht dem Daten-Fluss "Quell
 - [x] **Phase 2: Now-Playing-Sources** - Last.fm-Adapter, AppleScript-Fallback und Source-Chain mit AppleScript als Authority für Play/Pause (completed 2026-05-08)
 - [ ] **Phase 3: Polling-Loop und Daemon-Verdrahtung** - Recursive-setTimeout-Loop, Track-Diff, SIGTERM-Handler und unhandled-Rejection-Guards, lauffähig im Foreground
 - [ ] **Phase 4: launchd-Installation** - Plist-Template, Install/Uninstall-Scripts mit TCC-Permission-Trigger und stderr/stdout-Routing in `~/Library/Logs/`
+- [ ] **Phase 5: CDP-Bridge Refactor (Gather 2.0)** - Sink-Replatforming von gather-game-client@43 (Gather 1.0 WS) auf Chrome-DevTools-Protocol gegen lokale GatherV2-Electron-App. Triggert `setCustomStatus` direkt im Renderer. Auto-Restart der App mit Debug-Flag. Out-of-Band v1-Migration nach Spike-Befund.
 
 ## Phase Details
 

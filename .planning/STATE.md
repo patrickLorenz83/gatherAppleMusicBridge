@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-last_updated: "2026-05-08T17:25:07.479Z"
+last_updated: "2026-05-08T22:25:00.000Z"
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 6
-  percent: 86
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 7
+  percent: 88
 ---
 
 # STATE: gatherAppleMusicBridge
@@ -26,18 +26,18 @@ progress:
 
 ## Current Position
 
-- **Phase:** 4 (launchd-Installation) — Plan 04-01 Code abgeschlossen, Plan 04-02 (Real-System-Smoke-Test) deferred (User-Action)
-- **Plan:** 04-01 abgeschlossen (Plist-Renderer, Install-/Uninstall-Scripts, npm-Scripts, README).
-- **Status:** Phase-4-Code (Plan 04-01) 100% komplett. Alle 8 Phase-4-Requirements (CFG-05, DMN-01..07) im Code abgedeckt. Plan 04-02 ist 2x checkpoint:human-verify (Real-System-Mutation): User muss `npm run install-daemon` selbst laufen lassen und `launchctl list | grep gather` prüfen.
-- **Progress:** [█████████░] 86%
+- **Phase:** 5 (CDP-Bridge Refactor / Gather 2.0) — Plan 05-01 Code abgeschlossen, Task 9 (visuelle Verifikation gegen GatherV2) deferred als User-Action
+- **Plan:** 05-01 abgeschlossen (CDP-Sink, Pre-Flight-Helper, Config-Refactor, Loop/Index-Compat, README).
+- **Status:** Phase-5-Code (Plan 05-01) 100% komplett. SINK-01..05 + CFG-01..02 unter neuer CDP-Implementierung erfüllt. `tsc --noEmit` clean. 8 atomic Commits. Task 9 (Smoke-Test gegen lebende GatherV2-App) ist User-Action: `open -a GatherV2 --args --remote-debugging-port=9222` + `npm run test:sink`. Plan 04-02 (launchd Real-System-Smoke-Test) bleibt als zweite User-Action stehen.
+- **Progress:** [█████████░] 88%
 
 ```
-[██████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░] 2/4 phases (50%, 4/4 Plans in Phases 1+2)
+[████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 4/5 phases (80%, 7/8 Plans)
 ```
 
 ## Current Focus
 
-**Next action:** Plan 04-02 (Real-System-Smoke-Test, 2x checkpoint:human-verify) — User-Action. Aufruf: `/gsd-execute-phase 4`. User muss `npm run install-daemon` selbst laufen lassen, beim TCC-Prompt "Terminal möchte Music steuern" mit "OK" bestätigen, und mit `launchctl list | grep gather`, `tail -f ~/Library/Logs/gather-bridge.log` validieren, dass der Daemon läuft, Status setzt, bei Crash neu startet und bei Config-Error sauber endet.
+**Next action:** Phase-5 Task 9 (Visuelle Verifikation gegen GatherV2) als User-Action ausführen — `open -a GatherV2 --args --remote-debugging-port=9222` + Login + `npm run check-cdp` + `npm run test:sink`. Erwartet: Avatar zeigt 🎵 Daft Punk – Around the World für 10s, dann leer. Anschließend Plan 04-02 (Real-System-Launchd-Smoke-Test) via `/gsd-execute-phase 4`.
 
 **Phase 2 scope reminder:**
 
@@ -52,9 +52,9 @@ progress:
 
 ## Performance Metrics
 
-- **Phases completed:** 0 (Phases 1+2+3+4-Code 100%, Verifier offen, Plan 04-02 Real-System-Smoke deferred)
-- **Plans completed:** 6 (von 7; Plan 04-02 deferred als User-Action)
-- **Requirements validated:** 27/27 im Code (CFG-01..05, SINK-01..05, SRC-01..05, LOOP-01..05, DMN-01..07) — System-Verifikation für DMN-* steht aus (Plan 04-02)
+- **Phases completed:** 0 (Phases 1+2+3+4-Code+5-Code 100%, Verifier offen, Plan 04-02 Real-System-Smoke deferred, Phase-5-Task-9 visuelle Verifikation deferred)
+- **Plans completed:** 7 (von 8; Plan 04-02 deferred als User-Action)
+- **Requirements validated:** 27/27 + SINK-01..05/CFG-01..02 unter CDP-Refactor (Phase 5) — System-Verifikation für DMN-* (Plan 04-02) und CDP-Live-Smoke (Phase 5 Task 9) steht aus
 - **Time elapsed since init:** 0d
 
 | Plan | Duration | Tasks | Files |
@@ -66,6 +66,8 @@ progress:
 | Phase 3 P01 (Polling-Loop, Daemon) | 5min | 3 tasks | 3 files |
 | Phase 03 P01 | 5min | 3 tasks | 3 files |
 | Phase 04 P01 | 275s | 3 tasks | 5 files |
+| Phase 05 P01 (CDP-Bridge Refactor) | 8min | 8 tasks | 11 files |
+| Phase 05 P01 | 8min | 8 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -148,8 +150,24 @@ progress:
 | Re-Install Idempotenz: `launchctl bootout` mit `allowFailure: true` als erster launchctl-Call | Service nicht geladen → bootout liefert Exit ≠ 0, das ist erwartet und kein Fehler. Damit ist `npm run install-daemon` mehrfach hintereinander aufrufbar, ohne dass der zweite Run scheitert (DMN-04). |
 | Build-Step (`npm run build`) als Schritt 1 von 6 in install-daemon.ts | Plist verweist auf `dist/index.js`, nicht auf TS-Source via `tsx`. Production-Mode, schneller Startup, kein tsx-Overhead im Daemon-Lebenszyklus. |
 
+### Execution Decisions (Plan 05-01)
+
+| Decision | Rationale |
+|----------|-----------|
+| Per-Call CDP statt persistenter Connection | Locked in 05-CONTEXT.md > Decisions. App-Restart wechselt die WS-Debugger-URL der Page; persistent + Reconnect = mehr Failure-Modes. ~200ms-Latenz pro Call ist bei 10s-Polling tolerierbar. |
+| `runInPage` als Methodenname statt `eval` | Vermeidet Security-Linter-Hits und macht im Namen sichtbar, dass es um eine Renderer-Page geht (CDP `Runtime.evaluate`), nicht um Sandbox-eval. Vom Prompt explizit verlangt. |
+| `JSON.stringify` für jeden interpolierten Wert in Renderer-Expressions | T-05-01-Mitigation. Track-Namen wie `Don't Stop Me Now` würden ohne Stringify die Expression brechen oder im Worst-Case eine Code-Injection im Renderer ermöglichen. |
+| `(async () => { return await ${expr}; })()` statt `(async () => { ${expr}; })()` | Skelett-Korrektur (Rule 1 Auto-Fix). Saubere Wert-Pass-Through, sodass `awaitPromise: true` korrekt mit interner async State-Updates arbeitet. Kein redundantes Semicolon-Sandwich. |
+| `AbortSignal.timeout(2000)` auf `/json`-Fetch | T-05-03-Mitigation. Verhindert Hänger, wenn CDP-Port offen aber kein Antwort. |
+| `@types/chrome-remote-interface` als devDep installiert | `chrome-remote-interface` bringt keine eigenen `.d.ts` mit (`ls node_modules/chrome-remote-interface/*.d.ts` leer); ohne @types würde implicit-any meckern. |
+| Smoke-Test ohne `import { config }` | Test soll laufen, auch wenn LASTFM-Refine fehlschlagen würde — die Sink-CDPConfig-Defaults reichen. |
+| `process.env.GATHER_CDP_PORT` aus dem Logger-Redaction-Pfad-Cleanup ausgelassen | Port ist kein Geheimnis, im Gegensatz zu API-Keys. Nur LASTFM-Pfade bleiben in `redact.paths`. |
+| `git rm` statt `rm` + `git add -A` für `src/setup-ws.ts` | Sauberer Stage-Eintrag, kein Risiko, dass andere untracked Files versehentlich mit-committed werden. |
+| `Number(config.GATHER_CDP_PORT)` im Konstruktor-Aufruf | Zod-Schema hat `string` mit Default `"9222"`; CDPConfig-Port ist `number`. Explizite Konvertierung statt `parseInt` vermeidet Edge-Cases. |
+
 ### Active TODOs
 
+- **Plan 05-01 Task 9 (Visuelle Verifikation gegen GatherV2, deferred):** User muss GatherV2-App mit `--remote-debugging-port=9222` starten, im Space einloggen, `npm run check-cdp` (✅-Output erwartet), dann `npm run test:sink`. Erwartet: 🎵 Daft Punk – Around the World erscheint im UI für 10s, dann leer. Failure-Diagnose siehe README + 05-01-PLAN.md Task 9.
 - **Plan 04-02 (Real-System-Smoke-Test, deferred):** 2x checkpoint:human-verify, der User muss `npm run install-daemon` selbst laufen lassen, beim TCC-Prompt "Terminal möchte Music steuern" mit "OK" bestätigen, und mit `launchctl list | grep gather`, `launchctl print gui/$(id -u)/agency.deepr.gather-apple-music-bridge`, `tail -f ~/Library/Logs/gather-bridge.log` die Service-Aktivierung, Status-Update in Gather, KeepAlive-Restart bei Crash und sauberen Exit bei Config-Error validieren. Aufruf via `/gsd-execute-phase 4`.
 - **Phase-1-Verifier:** Muss `human_verification`-Block für deferred Task 4 (visueller Smoke-Test im Gather-Browser-Tab) in `01-VERIFICATION.md` aufnehmen. ~30s User-Action nach `.env`-Setup.
 - **Phase-2-Verifier:** Muss `human_verification`-Block für drei optionale Smoke-Test-Läufe (`npm run test:sources` mit Music.app spielt / pausiert / geschlossen) in `02-VERIFICATION.md` aufnehmen. Erwartete Ergebnisse stehen in `02-02-PLAN.md` Abschnitt `<verification>`.
@@ -169,7 +187,26 @@ None.
 
 ### Last session
 
-**2026-05-08T17:20 — Phase 4 (Plan 04-01) ausgeführt:**
+**2026-05-08T22:20 — Phase 5 (Plan 05-01) ausgeführt:**
+
+- Plan 05-01 (CDP-Bridge Refactor / Gather 2.0): 8 Tasks, 8 atomic Commits
+  - `cd5e64f` `chore(05-01)` — Deps tauschen (gather-game-client/isomorphic-ws/ws raus, chrome-remote-interface@^0.33.3 + @types/chrome-remote-interface rein)
+  - `983822c` `refactor(05-01)` — `src/setup-ws.ts` gelöscht (kein WebSocket-Polyfill mehr nötig)
+  - `800c2f6` `feat(05-01)` — `src/sink/gather.ts` komplett neu, CDP-Pfad mit `runInPage`-Helper, JSON.stringify-geschützte Interpolation, AbortSignal-Timeout
+  - `bb320c4` `feat(05-01)` — `src/config.ts` ohne Gather-Pflicht-Keys, optionale `GATHER_CDP_PORT`/`GATHER_PAGE_URL_FILTER` mit Defaults
+  - `c71689d` `refactor(05-01)` — `scripts/test-sink.ts` an async CDP-API angepasst (`new GatherSink()` ohne Args)
+  - `41bd743` `refactor(05-01)` — `src/index.ts`/`src/loop.ts` awaiten Sink-Calls, setup-ws-Import + Doc-Block raus, Logger-Redaction-Pfade aufgeräumt
+  - `e56e0ff` `feat(05-01)` — `scripts/check-cdp.ts` Pre-Flight-CLI + `npm run check-cdp` Script
+  - `9c699b9` `docs(05-01)` — README mit GatherV2-Setup-Anleitung, CDP-Troubleshooting, Architektur-Update
+- `npx tsc -p . --noEmit` clean nach Tasks 6, 7 und am Phasenende.
+- Plan-Level No-Stale-Imports-Sweep clean: kein Treffer für `setup-ws|gather-game-client|isomorphic-ws` in `src/` oder `scripts/`.
+- 3 Deviations (Rule 1 Auto-Fixes + Rule 2 Cleanup): Skelett-Korrektur `(async () => return await ${expr})()` statt Semicolon-Sandwich; Logger-Redaction-Pfade `env.GATHER_API_KEY`/`*.GATHER_API_KEY` entfernt; DocBlock-Wording in `config.ts` entschärft für Verify-Konformität. Alle Auto-Fixes in Standard-Task-Commits enthalten.
+- Task 9 (visuelle Verifikation gegen GatherV2-App) bewusst deferred — autonomous-Mode kann keine App starten + visuell verifizieren. Setup-Anleitung im SUMMARY und README.
+- 05-01-SUMMARY mit Self-Check: PASSED geschrieben.
+
+**Pre-existing:**
+
+- 2026-05-08T17:20 — Phase 4 (Plan 04-01) ausgeführt (Plist-Renderer, Install-/Uninstall-Scripts, npm-Scripts, README; 3 Tasks)
 
 - Plan 04-01 (launchd-Installation Code-Artefakte): 3 Tasks, 3 atomic Commits
   - `549ce31` `feat(04-01): add renderPlist template function with snapshot test` — `scripts/lib/plist.ts`, `scripts/lib/plist.test.ts`
@@ -201,13 +238,18 @@ None.
 
 ### Resume on next session
 
-1. **User (falls noch nicht geschehen):** `cp .env.example .env` und mit echten Keys füllen.
-2. **Claude:** `/gsd-verify-phase 1` (Phase-1-Verifier, mit `human_verification`-Block für visuellen Smoke-Test).
-3. **Claude:** `/gsd-verify-phase 2` (Phase-2-Verifier, mit `human_verification`-Block für drei optionale `npm run test:sources`-Läufe).
-4. **Claude:** `/gsd-verify-phase 3` (Phase-3-Verifier, mit `human_verification`-Block für optionalen End-to-End-Smoke-Test `npx tsx src/index.ts`).
-5. **Claude (Plan 04-02 ausstehend):** `/gsd-execute-phase 4` lässt den Orchestrator Plan 04-02 als 2x checkpoint:human-verify ausführen — User-Action: `npm run install-daemon`, dann mit `launchctl list | grep gather`, `tail -f ~/Library/Logs/gather-bridge.log` validieren.
-6. **Claude:** `/gsd-verify-phase 4` (Phase-4-Verifier, mit `human_verification`-Block für Service-Aktivierung, KeepAlive-Restart bei Crash, sauberer Exit bei Config-Error).
+1. **User (falls noch nicht geschehen):** `cp .env.example .env` (LASTFM-Vars optional eintragen).
+2. **User (Phase 5 Task 9 — visuelle Verifikation gegen GatherV2):**
+   - GatherV2-App beenden, dann `open -a GatherV2 --args --remote-debugging-port=9222`
+   - Im Space einloggen, `npm run check-cdp` (✅-Output erwartet)
+   - `npm run test:sink` — Avatar-Status für 10s prüfen, dann leer
+3. **Claude:** `/gsd-verify-phase 5` (Phase-5-Verifier, mit `human_verification`-Block für die visuelle CDP-Smoke-Test-Akzeptanz aus Schritt 2).
+4. **Claude:** `/gsd-verify-phase 1` (Phase-1-Verifier, mit `human_verification`-Block für visuellen Smoke-Test). Anmerkung: Phase 1 ist durch Phase 5 partiell entwertet (Sink-Implementierung ersetzt) — Verifier sollte das berücksichtigen.
+5. **Claude:** `/gsd-verify-phase 2` (Phase-2-Verifier).
+6. **Claude:** `/gsd-verify-phase 3` (Phase-3-Verifier).
+7. **Claude (Plan 04-02 ausstehend):** `/gsd-execute-phase 4` lässt den Orchestrator Plan 04-02 als 2x checkpoint:human-verify ausführen — User-Action: `npm run install-daemon`, dann mit `launchctl list | grep gather`, `tail -f ~/Library/Logs/gather-bridge.log` validieren.
+8. **Claude:** `/gsd-verify-phase 4` (Phase-4-Verifier).
 
 ---
 *State initialized: 2026-05-08*
-*Last execution: 2026-05-08 (Plan 04-01 — Phase 4 Code abgeschlossen, Plan 04-02 deferred)*
+*Last execution: 2026-05-08 (Plan 05-01 — Phase 5 Code abgeschlossen, Task 9 visuelle Verifikation deferred)*
