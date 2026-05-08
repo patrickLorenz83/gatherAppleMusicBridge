@@ -14,6 +14,7 @@
     "typecheck": "tsc -p . --noEmit",
     "test:sink": "tsx scripts/test-sink.ts",
     "test:sources": "tsx scripts/test-sources.ts",
+    "check-cdp": "tsx scripts/check-cdp.ts",
     "install-daemon": "tsx scripts/install-daemon.ts",
     "uninstall-daemon": "tsx scripts/uninstall-daemon.ts"
   },
