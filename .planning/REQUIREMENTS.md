@@ -7,11 +7,11 @@
 
 ### Sources (Now-Playing-Daten)
 
-- [ ] **SRC-01**: Bridge liest aktuell laufenden Track aus Last.fm via `user.getRecentTracks` und filtert per `@attr.nowplaying === "true"` (nicht per Position)
-- [ ] **SRC-02**: Bridge nutzt AppleScript gegen Music.app als Fallback, wenn Last.fm keinen Now-Playing-Track liefert
-- [ ] **SRC-03**: AppleScript-Source ist Authority für Play/Pause/Stop, weil Last.fm `nowplaying`-Flag nach Pause stale stehen kann
-- [ ] **SRC-04**: AppleScript prüft via `System Events` ob Music.app läuft, bevor `tell application "Music"` ausgeführt wird (verhindert Auto-Start)
-- [ ] **SRC-05**: Source-Chain implementiert ein gemeinsames `NowPlayingSource`-Interface mit Error-zu-null-Mapping
+- [x] **SRC-01**: Bridge liest aktuell laufenden Track aus Last.fm via `user.getRecentTracks` und filtert per `@attr.nowplaying === "true"` (nicht per Position)
+- [x] **SRC-02**: Bridge nutzt AppleScript gegen Music.app als Fallback, wenn Last.fm keinen Now-Playing-Track liefert
+- [x] **SRC-03**: AppleScript-Source ist Authority für Play/Pause/Stop, weil Last.fm `nowplaying`-Flag nach Pause stale stehen kann
+- [x] **SRC-04**: AppleScript prüft via `System Events` ob Music.app läuft, bevor `tell application "Music"` ausgeführt wird (verhindert Auto-Start)
+- [x] **SRC-05**: Source-Chain implementiert ein gemeinsames `NowPlayingSource`-Interface mit Error-zu-null-Mapping
 
 ### Sink (Gather-Status)
 
@@ -89,11 +89,11 @@ Reaktiv nach v1, basierend auf Live-Erfahrung.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SRC-01 | Phase 2 | Pending |
-| SRC-02 | Phase 2 | Pending |
-| SRC-03 | Phase 2 | Pending |
-| SRC-04 | Phase 2 | Pending |
-| SRC-05 | Phase 2 | Pending |
+| SRC-01 | Phase 2 | Complete |
+| SRC-02 | Phase 2 | Complete |
+| SRC-03 | Phase 2 | Complete |
+| SRC-04 | Phase 2 | Complete |
+| SRC-05 | Phase 2 | Complete |
 | SINK-01 | Phase 1 | Complete |
 | SINK-02 | Phase 1 | Complete |
 | SINK-03 | Phase 1 | Complete |

@@ -16,7 +16,7 @@ Die Phasen folgen einer **Risk-First-Reihenfolge**, nicht dem Daten-Fluss "Quell
 ## Phases
 
 - [ ] **Phase 1: Foundation und Gather-Sink** - Repo-Setup, Config/Logger, WebSocket-Polyfill und GatherSink-Wrapper mit Smoke-Test gegen echtes Gather-Space
-- [ ] **Phase 2: Now-Playing-Sources** - Last.fm-Adapter, AppleScript-Fallback und Source-Chain mit AppleScript als Authority für Play/Pause
+- [x] **Phase 2: Now-Playing-Sources** - Last.fm-Adapter, AppleScript-Fallback und Source-Chain mit AppleScript als Authority für Play/Pause (completed 2026-05-08)
 - [ ] **Phase 3: Polling-Loop und Daemon-Verdrahtung** - Recursive-setTimeout-Loop, Track-Diff, SIGTERM-Handler und unhandled-Rejection-Guards, lauffähig im Foreground
 - [ ] **Phase 4: launchd-Installation** - Plist-Template, Install/Uninstall-Scripts mit TCC-Permission-Trigger und stderr/stdout-Routing in `~/Library/Logs/`
 
@@ -44,7 +44,9 @@ Die Phasen folgen einer **Risk-First-Reihenfolge**, nicht dem Daten-Fluss "Quell
   3. Wenn Music.app pausiert oder gestoppt ist, liefert die Source-Chain `null` (auch wenn Last.fm noch ein stale `nowplaying=true` zurückgibt) — AppleScript ist Authority für Play/Pause/Stop.
   4. AppleScript startet Music.app niemals ungewollt: bei nicht laufender Music.app gibt der Outer-Guard `null` zurück, ohne `tell application "Music"` ohne Running-Check auszuführen.
   5. Einzelner Source-Fehler (Last.fm 503, AppleScript-Error) wird in der Chain zu `null` gemappt und geloggt, ohne den Caller zu crashen.
-**Plans**: TBD
+**Plans**: 2 plans
+  - [x] 02-01-PLAN.md — Source-Adapter (Last.fm + AppleScript) und Source-Interface mit run-applescript-Dep
+  - [x] 02-02-PLAN.md — Source-Chain-Composer (AppleScript-Authority) plus optionales Smoke-Test-Script
 
 ### Phase 3: Polling-Loop und Daemon-Verdrahtung
 **Goal**: Daemon läuft im Foreground (`tsx src/index.ts`) als End-to-End-Bridge: alle 10 Sekunden pollen, bei Track-Wechsel Status setzen, bei Pause leeren, sauberer Shutdown bei SIGTERM/SIGINT.
@@ -75,7 +77,7 @@ Die Phasen folgen einer **Risk-First-Reihenfolge**, nicht dem Daten-Fluss "Quell
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation und Gather-Sink | 1/2 | In Progress|  |
-| 2. Now-Playing-Sources | 0/0 | Not started | - |
+| 2. Now-Playing-Sources | 2/2 | Complete   | 2026-05-08 |
 | 3. Polling-Loop und Daemon-Verdrahtung | 0/0 | Not started | - |
 | 4. launchd-Installation | 0/0 | Not started | - |
 
