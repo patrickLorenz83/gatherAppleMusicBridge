@@ -18,7 +18,7 @@ Wenn ich in Gather online bin, sehen meine Kollegen, was ich gerade höre, ohne 
 
 - [ ] Bridge liest Now-Playing-Track aus Last.fm (`getRecentTracks?nowplaying=true`)
 - [ ] Fallback auf AppleScript gegen Music.app, wenn Last.fm keinen `nowplaying=true`-Eintrag liefert
-- [ ] Bridge setzt Gather-Status via Gather HTTP API (Format: `♫ Artist – Track`)
+- [ ] Bridge setzt Gather-Status via `@gathertown/gather-game-client` WebSocket-API (`setEmojiStatus` + `setTextStatus`, Format: `♫ Artist – Track`)
 - [ ] Polling-Loop mit 10-Sekunden-Intervall
 - [ ] Gather-Status wird geleert, wenn Apple Music pausiert oder nichts spielt
 - [ ] API-Keys (Gather, Last.fm) und Konfiguration in `.env`-Datei (in `.gitignore`)
@@ -42,7 +42,7 @@ Wenn ich in Gather online bin, sehen meine Kollegen, was ich gerade höre, ohne 
 - macOS (Darwin 25.3.0) als alleinige Zielplattform
 - Apple Music als Player (Music.app)
 - NepTunes als Last.fm-Scrobbler (kostenlose macOS-App, scrobbelt Music.app)
-- Gather 2.0 mit HTTP API für Status-Setting
+- Gather 2.0 mit WebSocket-API für Live-Player-Status (HTTP-API ist nur für Räume/Maps/Objekte)
 
 **Vor-Recherche (Claude-Chat):**
 
@@ -61,7 +61,7 @@ Last.fm (getRecentTracks?nowplaying=true)
    ↓ Polling alle 10s (Bridge)
    ↓ Fallback: osascript → Music.app
 Bridge (Node.js/TS)
-   ↓ Gather HTTP API (setStatus)
+   ↓ Gather WebSocket-API (gather-game-client: setEmojiStatus + setTextStatus)
 Gather Space (Status: ♫ Artist – Track)
 ```
 
