@@ -1,0 +1,21 @@
+# Secrets — niemals committen
+.env
+.env.local
+.env.*.local
+
+# Build-Output
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+logs/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
