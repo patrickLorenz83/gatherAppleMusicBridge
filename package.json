@@ -13,7 +13,9 @@
     "start": "node dist/index.js",
     "typecheck": "tsc -p . --noEmit",
     "test:sink": "tsx scripts/test-sink.ts",
-    "test:sources": "tsx scripts/test-sources.ts"
+    "test:sources": "tsx scripts/test-sources.ts",
+    "install-daemon": "tsx scripts/install-daemon.ts",
+    "uninstall-daemon": "tsx scripts/uninstall-daemon.ts"
   },
   "dependencies": {
     "@gathertown/gather-game-client": "^43.0.1",
