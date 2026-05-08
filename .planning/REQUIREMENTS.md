@@ -31,10 +31,10 @@
 
 ### Konfiguration und Logging
 
-- [ ] **CFG-01**: API-Keys (`LASTFM_API_KEY`, `LASTFM_USER`, `GATHER_API_KEY`, `GATHER_SPACE_ID`) liegen in `.env`-Datei im Repo-Root
-- [ ] **CFG-02**: `.env` ist in `.gitignore` (vor erstem Commit), `.env.example` ist committet
-- [ ] **CFG-03**: Config-Loader validiert alle Env-Variablen mit Zod, beendet bei Fehlern mit `process.exit(0)` (nicht 1) gegen KeepAlive-Loop
-- [ ] **CFG-04**: Pino-Logger mit Redaction für API-Keys (kein Token in Logs)
+- [x] **CFG-01**: API-Keys (`LASTFM_API_KEY`, `LASTFM_USER`, `GATHER_API_KEY`, `GATHER_SPACE_ID`) liegen in `.env`-Datei im Repo-Root
+- [x] **CFG-02**: `.env` ist in `.gitignore` (vor erstem Commit), `.env.example` ist committet
+- [x] **CFG-03**: Config-Loader validiert alle Env-Variablen mit Zod, beendet bei Fehlern mit `process.exit(0)` (nicht 1) gegen KeepAlive-Loop
+- [x] **CFG-04**: Pino-Logger mit Redaction für API-Keys (kein Token in Logs)
 - [ ] **CFG-05**: Logs gehen nach stderr/stdout, launchd routet zu `~/Library/Logs/gather-bridge.{log,err}`
 
 ### Daemon-Installation (launchd)
@@ -104,10 +104,10 @@ Reaktiv nach v1, basierend auf Live-Erfahrung.
 | LOOP-03 | Phase 3 | Pending |
 | LOOP-04 | Phase 3 | Pending |
 | LOOP-05 | Phase 3 | Pending |
-| CFG-01 | Phase 1 | Pending |
-| CFG-02 | Phase 1 | Pending |
-| CFG-03 | Phase 1 | Pending |
-| CFG-04 | Phase 1 | Pending |
+| CFG-01 | Phase 1 | Complete |
+| CFG-02 | Phase 1 | Complete |
+| CFG-03 | Phase 1 | Complete |
+| CFG-04 | Phase 1 | Complete |
 | CFG-05 | Phase 4 | Pending |
 | DMN-01 | Phase 4 | Pending |
 | DMN-02 | Phase 4 | Pending |

@@ -74,7 +74,7 @@ Die Phasen folgen einer **Risk-First-Reihenfolge**, nicht dem Daten-Fluss "Quell
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation und Gather-Sink | 0/0 | Not started | - |
+| 1. Foundation und Gather-Sink | 1/2 | In Progress|  |
 | 2. Now-Playing-Sources | 0/0 | Not started | - |
 | 3. Polling-Loop und Daemon-Verdrahtung | 0/0 | Not started | - |
 | 4. launchd-Installation | 0/0 | Not started | - |
