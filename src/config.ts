@@ -2,10 +2,15 @@ import "dotenv/config";
 import { z } from "zod";
 
 /**
- * Zod-Schema für Env-Vars.
+ * Zod-Schema für Env-Vars (Phase 5: CDP-Pfad gegen GatherV2-Electron-App).
  *
- * Gather-Keys sind Pflicht (Sink ohne sie sinnlos).
- * Last.fm-Keys sind optional: wenn beide leer/fehlend sind, läuft die
+ * Ab Phase 5 spricht die Bridge die lokale GatherV2-App via Chrome-DevTools-
+ * Protocol an — sie nutzt damit die bereits eingeloggte App-Session und braucht
+ * keine Gather-API-Keys mehr. Stattdessen optional zwei CDP-Felder mit
+ * sinnvollen Defaults (`9222` ist der dokumentierte Debug-Port,
+ * `app.v2.gather.town` ist der URL-Substring der GatherV2-Renderer-Page).
+ *
+ * Last.fm-Keys sind weiterhin optional: wenn beide leer/fehlend sind, läuft die
  * Source-Chain ausschließlich über AppleScript gegen Music.app. Beide müssen
  * konsistent gesetzt sein — entweder beide oder keiner.
  */
@@ -13,8 +18,11 @@ const EnvSchema = z
   .object({
     LASTFM_API_KEY: z.string().optional().default(""),
     LASTFM_USER: z.string().optional().default(""),
-    GATHER_API_KEY: z.string().min(1, "GATHER_API_KEY fehlt oder ist leer"),
-    GATHER_SPACE_ID: z.string().min(1, "GATHER_SPACE_ID fehlt oder ist leer"),
+    GATHER_CDP_PORT: z.string().optional().default("9222"),
+    GATHER_PAGE_URL_FILTER: z
+      .string()
+      .optional()
+      .default("app.v2.gather.town"),
   })
   .refine(
     (data) =>
