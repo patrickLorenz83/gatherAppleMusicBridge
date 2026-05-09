@@ -1,174 +1,237 @@
 # gatherAppleMusicBridge
 
-Lokaler macOS-Daemon (Node.js und TypeScript), der den aktuell in Apple Music laufenden Track in den Gather-Status schreibt. Single-User-Tool für Patrick Lorenz.
+A local macOS daemon that pushes the currently-playing track from
+**Apple Music** into your **Gather 2.0** custom status.
 
-## Voraussetzungen
+```
+🎧 Daft Punk – Around the World
+```
 
-- macOS (Apple Silicon oder Intel)
-- Node.js 22 LTS oder neuer (`node --version`)
+When you're online in Gather, your colleagues see what you're listening
+to — without you having to switch from Apple Music to Spotify just for
+the native integration.
+
+> **Status:** v1.0 working, used in production by the author.
+> **Platform:** macOS only (Apple Silicon and Intel).
+> **License:** MIT.
+
+## Why this exists
+
+Gather 2.0 (`app.v2.gather.town`, launched September 2025) ships with
+a native Spotify integration but no Apple Music one. There's also no
+public API to set a custom status from a third-party tool.
+
+This bridge solves both problems by talking to the locally-running
+GatherV2 Electron app over the **Chrome DevTools Protocol** —
+essentially driving the renderer from outside, the same way the in-app
+status editor would. No reverse-engineered HTTP endpoints, no leaked
+auth tokens. The app authenticates itself; we just call its internal
+mutation.
+
+## What you get
+
+- 10-second polling loop reading the current track from `Music.app` via
+  AppleScript (no NepTunes/Last.fm required).
+- Status updates within ~10–15 s of a track change.
+- Status auto-clears when you pause Apple Music.
+- launchd integration: starts at login, restarts on crash, stops cleanly
+  on config errors.
+- Auto-heal: if you launch GatherV2 manually (Spotlight, Dock, Finder)
+  without the debug-port flag, the bridge detects this, quits the app,
+  and relaunches it with the flag.
+
+## Requirements
+
+- macOS (tested on Sonoma and Sequoia)
+- Node.js 22 LTS or newer (`node --version`)
 - Apple Music (`Music.app`)
-- GatherV2-Desktop-App (`app.v2.gather.town`) installiert, Account-Login funktioniert
+- GatherV2 desktop app installed from Gather, signed in to your space
 
-## Setup
-
-1. Repo klonen und Dependencies installieren:
-
-   ```bash
-   npm install
-   ```
-
-2. Optional: `.env` anlegen, falls du Defaults überschreiben willst (Port, URL-Filter, Log-Level). Für 99 % der Fälle nicht nötig — Bridge läuft sofort:
-
-   ```bash
-   cp .env.example .env  # nur falls Override gewünscht
-   ```
-
-3. Daemon installieren (Build, launchd-Plist und TCC-Permission):
-
-   ```bash
-   npm run install-daemon
-   ```
-
-   Während des Installs erscheint einmalig ein macOS-Dialog "Terminal möchte Music steuern". Klick "OK", sonst kann der Daemon Apple Music nicht via AppleScript abfragen (siehe Troubleshooting).
-
-   **Wichtig:** Entferne `GatherV2` aus den macOS-Login-Items (Systemeinstellungen, Allgemein, Anmeldeobjekte), falls es dort eingetragen ist. Sonst startet GatherV2 zweimal: einmal ohne Debug-Flag durchs Login-Item, einmal mit Flag durch unseren LaunchAgent.
-
-4. Fertig. Bei jedem Login startet automatisch:
-   - **GatherV2** mit `--remote-debugging-port=9222` (über LaunchAgent `agency.deepr.gathervtwo-debug-launcher`)
-   - **Bridge-Daemon** im Hintergrund (über LaunchAgent `agency.deepr.gather-apple-music-bridge`)
-
-## CDP-Pfad (Gather 2.0)
-
-Die Bridge spricht ab Phase 5 nicht mehr das Gather-1.0-WebSocket-Protokoll, sondern steuert die lokal laufende GatherV2-Electron-App via Chrome-DevTools-Protocol (CDP). Voraussetzung: die App läuft mit `--remote-debugging-port=9222`. Mit `npm run install-daemon` ist das nach jedem Login automatisch der Fall.
-
-**Manuelle Testsession** (z.B. ohne installierten Daemon):
+## Quickstart
 
 ```bash
-open -a GatherV2 --args --remote-debugging-port=9222
+git clone https://github.com/patricklorenz/gatherAppleMusicBridge.git
+cd gatherAppleMusicBridge
+npm install
+npm run install-daemon
 ```
 
-Login im Space, dann verifizieren:
+The installer:
+1. Builds the TypeScript sources to `dist/`.
+2. Renders two launchd plists into `~/Library/LaunchAgents/`:
+   - `agency.deepr.gather-apple-music-bridge` — the bridge daemon.
+   - `agency.deepr.gathervtwo-debug-launcher` — auto-starts GatherV2
+     with `--remote-debugging-port=9222` at login.
+3. Triggers the macOS Automation permission prompt for `Music.app`
+   in the foreground (click **OK** when it appears).
+4. Bootstraps both LaunchAgents.
 
-```bash
-npm run check-cdp
-```
+After install:
 
-Erwartete Ausgabe: `✅ GatherV2-Page erreichbar: https://app.v2.gather.town/...`.
+> **Important:** remove `GatherV2` from System Settings → General →
+> Login Items. Otherwise it starts twice (once without the flag via the
+> Login Item, once with via our LaunchAgent).
 
-**Spotlight-Start (`Cmd+Space → "gather"`):** wenn du GatherV2 manuell startest (Spotlight, Dock, Finder), läuft sie ohne Debug-Flag. Die Bridge erkennt das und führt **Auto-Heal** durch: graceful quit per AppleScript, Relaunch mit Flag, warten bis `gatherDev` initialisiert ist (~4-6 s), dann setzt sie den Status. Kein manuelles Eingreifen nötig.
+That's it. Quit GatherV2, log out, log back in. Bridge starts, GatherV2
+starts with the debug flag, your status updates as you change tracks.
 
-**Auto-Heal deaktivieren:** falls gewünscht (z. B. für Tests), via Code: `new GatherSink({ autoHeal: false })`.
+## Configuration
 
-## Daemon-Steuerung
+All env vars are optional. Drop a `.env` in the repo root only if you
+need overrides. Defaults work for the typical setup.
 
-`npm run install-daemon` installiert zwei LaunchAgents:
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `GATHER_CDP_PORT` | `9222` | Chrome DevTools Protocol port. Must match the `--remote-debugging-port` GatherV2 was started with. |
+| `GATHER_PAGE_URL_FILTER` | `app.v2.gather.town` | URL substring used to find the GatherV2 page among CDP targets. |
+| `GATHER_APP_PATH` | `/Applications/GatherV2.app` | Where the GatherV2 app bundle lives. |
+| `GATHER_AUTO_HEAL` | `1` | Set to `0` to disable the kill+restart-on-Spotlight-launch logic. |
+| `LOG_LEVEL` | `info` | pino log level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`. |
 
-- **Bridge-Daemon** `agency.deepr.gather-apple-music-bridge` — die eigentliche Bridge (Polling-Loop und CDP-Sink)
-- **GatherV2-Launcher** `agency.deepr.gathervtwo-debug-launcher` — startet GatherV2 bei Login mit `--remote-debugging-port=9222`
+Validation: invalid values (non-numeric port, port out of 1–65535)
+fail fast at daemon startup.
 
-| Aktion | Befehl |
-|--------|--------|
-| Bridge-Status | `launchctl print gui/$(id -u)/agency.deepr.gather-apple-music-bridge` |
-| Bridge-Logs (live) | `tail -f ~/Library/Logs/gather-bridge.log` |
-| Bridge-Errors (live) | `tail -f ~/Library/Logs/gather-bridge.err` |
-| Bridge-Neustart (z.B. nach `.env`-Änderung) | `launchctl kickstart -k gui/$(id -u)/agency.deepr.gather-apple-music-bridge` |
-| Bridge-Stop | `launchctl bootout gui/$(id -u)/agency.deepr.gather-apple-music-bridge ~/Library/LaunchAgents/agency.deepr.gather-apple-music-bridge.plist` |
-| Launcher-Status | `launchctl print gui/$(id -u)/agency.deepr.gathervtwo-debug-launcher` |
-| Launcher-Logs | `tail -f ~/Library/Logs/gather-launcher.log` |
-| Beide deinstallieren | `npm run uninstall-daemon` |
+## Operation
 
-## Logs
+| Action | Command |
+|--------|---------|
+| Bridge status | `launchctl print gui/$(id -u)/agency.deepr.gather-apple-music-bridge` |
+| Bridge logs (live) | `tail -f ~/Library/Logs/gather-bridge.log` |
+| Bridge errors (live) | `tail -f ~/Library/Logs/gather-bridge.err` |
+| Bridge restart (e.g. after `.env` change) | `launchctl kickstart -k gui/$(id -u)/agency.deepr.gather-apple-music-bridge` |
+| Launcher status | `launchctl print gui/$(id -u)/agency.deepr.gathervtwo-debug-launcher` |
+| CDP pre-flight check | `npm run check-cdp` |
+| Smoke-test sink (writes a status, clears it) | `npm run test:sink` |
+| Smoke-test source (reads from Apple Music) | `npm run test:sources` |
+| Uninstall both LaunchAgents | `npm run uninstall-daemon` |
 
-- `~/Library/Logs/gather-bridge.log` ist Bridge-Daemon stdout (pino-JSON)
-- `~/Library/Logs/gather-bridge.err` ist Bridge-Daemon stderr (Crashes, AppleScript-Errors)
-- `~/Library/Logs/gather-launcher.log` ist GatherV2-Auto-Launcher stdout (üblicherweise leer)
-- `~/Library/Logs/gather-launcher.err` ist GatherV2-Auto-Launcher stderr
-
-Pretty-Print:
+Pretty-print logs:
 
 ```bash
 tail -f ~/Library/Logs/gather-bridge.log | npx pino-pretty
 ```
 
-Logs wachsen unbegrenzt, gelegentlich manuell leeren:
+## How it works
 
-```bash
-truncate -s 0 ~/Library/Logs/gather-bridge.log
 ```
+Apple Music
+  │
+  ▼ AppleScript (player state + track)
+src/sources/applescript.ts
+  │
+  ▼ NowPlayingSource
+src/loop.ts (10s polling, recursive setTimeout, AbortController, track-diff)
+  │
+  ▼ setStatus / clearStatus (await)
+src/sink/gather.ts (CDP client + auto-heal)
+  │
+  ▼ Chrome DevTools Protocol → window.gatherDev.Repos.gameSpace.currentSpaceUser.setCustomStatus({ emoji, text, clearCondition })
+GatherV2 Electron renderer
+  │
+  ▼ visible to your colleagues
+Gather UI status
+```
+
+Daemon supervision:
+
+```
+launchd (gui/$UID)
+├── agency.deepr.gather-apple-music-bridge (Bridge — KeepAlive on crash)
+└── agency.deepr.gathervtwo-debug-launcher (GatherV2 + --remote-debugging-port=9222)
+```
+
+## Security
+
+The bridge is local-only. It does not phone home, does not store
+credentials, does not control playback. The most powerful capability
+it enables is **JavaScript execution inside the GatherV2 renderer**
+via the CDP debug port. See [`SECURITY.md`](./SECURITY.md) for the
+full threat model and mitigations.
 
 ## Troubleshooting
 
-### AppleScript-Permission ("errAEEventNotPermitted -1743")
+### AppleScript permission denied (`-1743`)
 
-Wenn die Logs zeigen, dass der AppleScript-Fallback nicht funktioniert:
+The launchd-spawned daemon can't show the macOS Automation permission
+dialog itself. Reset and retrigger via the foreground installer:
 
-1. Permission zurücksetzen:
+```bash
+tccutil reset AppleEvents
+npm run install-daemon
+# Click OK on the "Terminal wants to control Music" dialog
+```
 
-   ```bash
-   tccutil reset AppleEvents
-   ```
+Or grant permission manually under
+**System Settings → Privacy & Security → Automation**.
 
-2. `npm run install-daemon` erneut laufen, beim TCC-Trigger im Vordergrund den Dialog mit "OK" bestätigen.
+### Node-Version changed (nvm or Homebrew update)
 
-Alternativ unter **Systemeinstellungen, Datenschutz und Sicherheit, Automation** prüfen, ob "Terminal" oder "Node" Zugriff auf "Music" hat.
+The plist embeds the absolute path to the Node binary that was active
+during install (`process.execPath`). After `nvm install <new-version>`
+or a Homebrew Node bump, the path may be stale. Fix:
 
-### Node-Version gewechselt (nvm oder Homebrew-Update)
+```bash
+npm run install-daemon  # rewrites the plist with the current Node path
+```
 
-Die Plist enthält den absoluten Pfad zum Node-Binary, das beim Install aktiv war (`process.execPath`). Nach `nvm install <neue-version>` oder einem Homebrew-Node-Update zeigt der Pfad ggf. ins Leere.
-
-Fix: `npm run install-daemon` erneut ausführen, der neue Pfad wird in die Plist geschrieben.
-
-### Daemon startet nicht
+### Daemon won't start
 
 ```bash
 launchctl print gui/$(id -u)/agency.deepr.gather-apple-music-bridge
+tail ~/Library/Logs/gather-bridge.err
 ```
 
-`last exit code` ungleich 0 deutet auf Crash hin, dann `~/Library/Logs/gather-bridge.err` lesen.
+A non-zero `last exit code` indicates a crash; logs explain the cause.
+Common causes: bad env value (e.g. invalid port), missing GatherV2 app,
+Node binary moved.
 
-`last exit code = 78` (`EX_CONFIG`) bedeutet meist Plist-Parse-Fehler oder fehlendes Node-Binary, dann Plist neu generieren via `npm run install-daemon`.
+### `npm run check-cdp` fails
 
-### Crash-Loop verhindern
+The helper diagnoses two distinct failure modes:
 
-Die Plist nutzt `KeepAlive: { SuccessfulExit: false, Crashed: true }` plus `ThrottleInterval: 30`. Das heißt:
+```bash
+npm run check-cdp
+```
 
-- **Sauberer Exit (Code 0)** ist kein Restart. Config-Fehler (z. B. fehlender API-Key) führen zu `process.exit(0)` und werden nicht restartet.
-- **Crash (Code ungleich 0)** ist ein Restart, frühestens nach 30 Sekunden.
+- **CDP port `localhost:9222` doesn't answer:** GatherV2 isn't running
+  or was started without the debug flag. Start it manually with:
+  ```bash
+  open -a GatherV2 --args --remote-debugging-port=9222
+  ```
+- **Port answers but no `app.v2.gather.town` page found:** GatherV2 is
+  on the login page or you're not in a space. Sign in and walk into
+  your space; the bridge will catch up on the next tick.
 
-Wenn der Daemon trotzdem in Loops läuft: `npm run uninstall-daemon` und Logs analysieren.
+### Logs grow unbounded
 
-### CDP nicht erreichbar oder GatherV2-Page nicht gefunden
+There's no log rotation built in. Truncate manually when needed:
 
-1. `npm run check-cdp` ausführen — der Helper sagt dir präzise, welcher der zwei Failure-Modes vorliegt:
-   - **CDP-Port `localhost:9222` antwortet nicht** -> GatherV2 läuft nicht oder wurde ohne `--remote-debugging-port`-Flag gestartet. Lösung:
-     ```bash
-     # GatherV2 sauber beenden, dann:
-     open -a GatherV2 --args --remote-debugging-port=9222
-     ```
-   - **Port antwortet, aber keine `app.v2.gather.town`-Page** -> App ist auf Login-Page oder du bist ausgeloggt. Im UI einloggen und in den Space gehen.
+```bash
+truncate -s 0 ~/Library/Logs/gather-bridge.{log,err}
+truncate -s 0 ~/Library/Logs/gather-launcher.{log,err}
+```
 
-2. Falls du einen anderen Port nutzen willst (z.B. wenn 9222 belegt ist):
-   ```bash
-   open -a GatherV2 --args --remote-debugging-port=9333
-   # in der .env:
-   GATHER_CDP_PORT=9333
-   ```
+(PRs adding rotation welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md).)
 
-### Audit-Warnungen (`npm audit`)
+## Limitations / things this won't do
 
-Vor Phase 5 zog der alte Gather-Game-Client alte axios- und protobufjs-Versionen mit CVE-Findings ein. Mit dem CDP-Refactor ist diese Dependency raus, `npm audit` sollte deutlich ruhiger sein. `chrome-remote-interface` ist gut gepflegt; falls dort eigene Audit-Hits auftauchen, lokal prüfen — das Tool ist Single-User und kontaktiert keine User-kontrollierten URLs.
+- macOS only. The CDP-against-Electron approach is portable in theory,
+  but the launchd integration and AppleScript source are not.
+- Single-space. The bridge talks to whatever GatherV2 page is currently
+  open. There's no support for multiple spaces or switching.
+- No reconnect against a flaky network. If the GatherV2 page navigates
+  away, the bridge waits for it to come back; it doesn't try to log you
+  in.
+- Auto-heal can briefly interrupt your GatherV2 session (~6 s) when you
+  launch the app via Spotlight without the debug flag. Set
+  `GATHER_AUTO_HEAL=0` to opt out.
+- Status text is hardcoded as `🎧 {artist} – {track}`. No format
+  templates yet.
 
-## Architektur
+## Contributing
 
-- `src/index.ts` ist der Daemon-Entrypoint (Sink-Connect, Signal-Handler, Polling-Loop, Last-Word-Log)
-- `src/sources/` enthält den AppleScript-Adapter gegen Music.app mit Outer-Guard, plus dünnen Source-Composer in `chain.ts`
-- `src/sink/` enthält den CDP-Wrapper gegen die GatherV2-Electron-App (`setCustomStatus` und `clearCustomStatus` via Chrome-DevTools-Protocol)
-- `src/loop.ts` ist der 10s-Polling-Loop mit recursive `setTimeout`, AbortController und Track-Diff
-- `scripts/install-daemon.ts` generiert die launchd-Plist und spielt sie ein
-- `scripts/uninstall-daemon.ts` entfernt die Plist und stoppt den Daemon
-- `scripts/check-cdp.ts` ist der CDP-Pre-Flight-Helper (`npm run check-cdp`)
-- `scripts/lib/plist.ts` ist der Plist-XML-Template-Renderer
+Issues and PRs welcome. See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
-## Lizenz
+## License
 
-Privat, nicht veröffentlicht.
+[MIT](./LICENSE) © 2026 Patrick Lorenz.
