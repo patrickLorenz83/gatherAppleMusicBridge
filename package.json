@@ -1,17 +1,43 @@
 {
   "name": "gather-apple-music-bridge",
   "version": "0.1.0",
-  "private": true,
-  "description": "Local macOS daemon: Apple Music now-playing zu Gather-Status",
+  "description": "Local macOS daemon that pushes Apple Music now-playing tracks to your Gather 2.0 custom status via Chrome DevTools Protocol.",
   "type": "module",
+  "license": "MIT",
+  "author": "Patrick Lorenz",
+  "homepage": "https://github.com/patricklorenz/gatherAppleMusicBridge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patricklorenz/gatherAppleMusicBridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/patricklorenz/gatherAppleMusicBridge/issues"
+  },
+  "keywords": [
+    "macos",
+    "apple-music",
+    "gather",
+    "gather-town",
+    "now-playing",
+    "status",
+    "launchd",
+    "applescript",
+    "chrome-devtools-protocol",
+    "cdp",
+    "electron"
+  ],
   "engines": {
     "node": ">=22.0.0"
   },
+  "os": [
+    "darwin"
+  ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p .",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "typecheck": "tsc -p . --noEmit",
+    "test": "tsx scripts/lib/plist.test.ts",
     "test:sink": "tsx scripts/test-sink.ts",
     "test:sources": "tsx scripts/test-sources.ts",
     "check-cdp": "tsx scripts/check-cdp.ts",
