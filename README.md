@@ -58,7 +58,9 @@ npm run check-cdp
 
 Erwartete Ausgabe: `✅ GatherV2-Page erreichbar: https://app.v2.gather.town/...`.
 
-**Wenn der Flag fehlt:** Der Daemon loggt beim ersten Tick `[gather] no GatherV2 page found at localhost:9222` und überspringt den Tick. Beim nächsten Tick (10s später) versucht er es erneut. Kein Crash.
+**Spotlight-Start (`Cmd+Space → "gather"`):** wenn du GatherV2 manuell startest (Spotlight, Dock, Finder), läuft sie ohne Debug-Flag. Die Bridge erkennt das und führt **Auto-Heal** durch: graceful quit per AppleScript, Relaunch mit Flag, warten bis `gatherDev` initialisiert ist (~4-6 s), dann setzt sie den Status. Kein manuelles Eingreifen nötig.
+
+**Auto-Heal deaktivieren:** falls gewünscht (z. B. für Tests), via Code: `new GatherSink({ autoHeal: false })`.
 
 ## Daemon-Steuerung
 

@@ -17,6 +17,7 @@
  * würde mehr Failure-Modes einführen als die ~200ms-Latenz wert sind, die ein
  * Per-Call-Connect kostet. 10s-Polling ist Latenz-tolerant.
  */
+import { spawnSync } from "node:child_process";
 import CDP from "chrome-remote-interface";
 import type { NowPlaying } from "../types.js";
 import { log } from "../logger.js";
@@ -24,6 +25,8 @@ import { log } from "../logger.js";
 interface CDPConfig {
   port: number; // default 9222
   pageUrlFilter: string; // default "app.v2.gather.town"
+  appPath: string; // default "/Applications/GatherV2.app"
+  autoHeal: boolean; // default true — relaunch GatherV2 if it runs without debug-flag
 }
 
 type CDPTarget = {
@@ -32,14 +35,21 @@ type CDPTarget = {
   webSocketDebuggerUrl?: string;
 };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export class GatherSink {
   private cfg: CDPConfig;
   private _connected = false;
+  private _healing = false;
 
   constructor(cfg: Partial<CDPConfig> = {}) {
     this.cfg = {
       port: cfg.port ?? 9222,
       pageUrlFilter: cfg.pageUrlFilter ?? "app.v2.gather.town",
+      appPath: cfg.appPath ?? "/Applications/GatherV2.app",
+      autoHeal: cfg.autoHeal ?? true,
     };
   }
 
@@ -135,9 +145,139 @@ export class GatherSink {
     );
   }
 
+  /**
+   * Probe: ist `window.gatherDev` im Renderer schon definiert? Genutzt nach
+   * Auto-Heal-Relaunch um Race zwischen Page-Verfügbarkeit und Bundle-Init zu
+   * vermeiden. Cheap eval, kein State-Change. Errors werden als "noch nicht
+   * ready" interpretiert (return false, kein Throw).
+   */
+  private async probeGatherDev(wsDebuggerUrl: string): Promise<boolean> {
+    let client;
+    try {
+      client = await CDP({ target: wsDebuggerUrl });
+      await client.Runtime.enable();
+      const r = await client.Runtime.evaluate({
+        expression: `typeof gatherDev !== "undefined" && !!gatherDev?.Repos?.gameSpace?.currentSpaceUser`,
+        returnByValue: true,
+      });
+      return r.result.value === true;
+    } catch {
+      return false;
+    } finally {
+      if (client) await client.close().catch(() => {});
+    }
+  }
+
+  /**
+   * Prüft ob eine GatherV2-Process-Instanz läuft. Genutzt für Auto-Heal-Entscheidung
+   * (App da, aber CDP-Port zu = User hat ohne Flag gestartet, z.B. via Spotlight).
+   */
+  private isGatherRunning(): boolean {
+    const r = spawnSync("/usr/bin/pgrep", ["-x", "GatherV2"], {
+      stdio: "ignore",
+      timeout: 2000,
+    });
+    return r.status === 0;
+  }
+
+  /**
+   * Auto-Heal: GatherV2 läuft ohne Debug-Flag (User hat via Spotlight, Dock oder
+   * Finder gestartet). Quittet die App graceful, startet sie mit Flag neu, und
+   * wartet bis CDP wieder erreichbar ist.
+   *
+   * Mehrfach-Aufrufe parallel werden via _healing-Flag verhindert.
+   */
+  private async relaunchGather(): Promise<void> {
+    if (this._healing) {
+      // Anderer Call macht gerade Auto-Heal — warte bis fertig statt parallel.
+      while (this._healing) await sleep(250);
+      return;
+    }
+    this._healing = true;
+    try {
+      log.warn(
+        { appPath: this.cfg.appPath, port: this.cfg.port },
+        "[gather] auto-heal: GatherV2 running without debug-port — restarting with flag",
+      );
+
+      // 1. Graceful quit via osascript (max 5s)
+      spawnSync(
+        "/usr/bin/osascript",
+        ["-e", 'tell application "GatherV2" to quit'],
+        { timeout: 5000, stdio: "ignore" },
+      );
+
+      // 2. Warte bis Process weg (max 10s), sonst force-kill
+      for (let i = 0; i < 20; i++) {
+        if (!this.isGatherRunning()) break;
+        await sleep(500);
+      }
+      if (this.isGatherRunning()) {
+        log.warn("[gather] auto-heal: graceful quit timed out, force-killing");
+        spawnSync("/usr/bin/pkill", ["-x", "GatherV2"], { stdio: "ignore" });
+        await sleep(1000);
+      }
+
+      // 3. Relaunch mit Debug-Flag
+      const openResult = spawnSync(
+        "/usr/bin/open",
+        [
+          "-a",
+          this.cfg.appPath,
+          "--args",
+          `--remote-debugging-port=${this.cfg.port}`,
+        ],
+        { stdio: "ignore", timeout: 5000 },
+      );
+      if (openResult.status !== 0) {
+        throw new Error(
+          `[gather] auto-heal: 'open -a ${this.cfg.appPath}' failed (exit ${openResult.status})`,
+        );
+      }
+
+      // 4. Warte bis CDP-Page UND gatherDev verfügbar sind (max 30s).
+      //    Page allein reicht nicht — Electron lädt erst die Splash-Page,
+      //    dann bootet das Renderer-Bundle, dann erst exposed `window.gatherDev`.
+      //    Wenn wir zu früh runInPage'n, schmeißt es "gatherDev is not defined".
+      for (let i = 0; i < 60; i++) {
+        const page = await this.findPage().catch(() => undefined);
+        if (page && page.webSocketDebuggerUrl) {
+          // Probe: ist `gatherDev` schon im Renderer initialisiert?
+          const ready = await this.probeGatherDev(page.webSocketDebuggerUrl);
+          if (ready) {
+            log.info(
+              { tries: i + 1, pageUrl: page.url },
+              "[gather] auto-heal: CDP ready (gatherDev initialized)",
+            );
+            return;
+          }
+        }
+        await sleep(500);
+      }
+      throw new Error(
+        "[gather] auto-heal: gatherDev did not become available within 30s after relaunch",
+      );
+    } finally {
+      this._healing = false;
+    }
+  }
+
   private async runInPage(expression: string): Promise<void> {
     // Targets pro Call frisch holen — App-Restarts wechseln die WS-Debugger-URL.
-    const page = await this.findPage();
+    let page: CDPTarget | undefined;
+    try {
+      page = await this.findPage();
+    } catch (err) {
+      // fetchTargets warf — CDP-Port unreachable (typischer Spotlight-Start-Fall).
+      // Auto-Heal: wenn die App läuft aber kein Debug-Port, killen+restarten.
+      if (this.cfg.autoHeal && this.isGatherRunning()) {
+        await this.relaunchGather();
+        page = await this.findPage(); // retry once after heal
+      } else {
+        throw err;
+      }
+    }
+
     if (!page || !page.webSocketDebuggerUrl) {
       throw new Error(
         "[gather] no GatherV2 page available (app not running or not in space)",
