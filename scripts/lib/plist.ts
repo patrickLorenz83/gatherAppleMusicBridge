@@ -1,7 +1,6 @@
 // scripts/lib/plist.ts
 // Template-Funktion für launchd-Plist (XML).
-// Substitution per String.replaceAll, kein xml-builder.
-// Locked-Decisions: siehe 04-CONTEXT.md und 04-01-PLAN.md.
+// Substitution per String.replaceAll, alle Werte XML-escaped.
 
 export interface PlistInput {
   label: string;
@@ -10,6 +9,21 @@ export interface PlistInput {
   workdir: string;
   logPath: string;
   errPath: string;
+}
+
+/**
+ * Escape XML-special characters in attribute/text values.
+ * Necessary because user paths can contain `&` (e.g., `/Users/Q&A/...`),
+ * `<` or `>` (rare on filesystems, but legal). Without escaping the
+ * resulting plist would be malformed XML and launchctl would reject it.
+ */
+function escapeXml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
 }
 
 const TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
@@ -60,26 +74,27 @@ const TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
 /**
  * renderPlist — XML-Plist-Renderer für den launchd-LaunchAgent.
  *
- * Substituiert die sechs Platzhalter im statischen Template per `String.replaceAll`.
- * Kein XML-Builder, keine Dependencies. Output ist deterministisch und byte-stabil.
+ * Substitutes the six placeholders in the static template via `String.replaceAll`.
+ * All input values are XML-escaped to handle paths with `&`, `<`, `>` etc.
+ * Output is deterministic and byte-stable for identical inputs.
  *
- * @param input  PlistInput mit allen sechs Substitutions-Werten (alle absolut, kein Tilde-Expand zur Render-Zeit nötig).
- * @returns      Vollständiger Plist-XML-String, ready zum Schreiben nach `~/Library/LaunchAgents/<label>.plist`.
+ * @param input  PlistInput with all six substitution values (absolute paths preferred — launchd does NOT expand `~`).
+ * @returns      Full plist XML string, ready to write to `~/Library/LaunchAgents/<label>.plist`.
  */
 export function renderPlist(input: PlistInput): string {
   return TEMPLATE
-    .replaceAll("{LABEL}", input.label)
-    .replaceAll("{NODE_PATH}", input.nodePath)
-    .replaceAll("{SCRIPT_PATH}", input.scriptPath)
-    .replaceAll("{WORKDIR}", input.workdir)
-    .replaceAll("{LOG_PATH}", input.logPath)
-    .replaceAll("{ERR_PATH}", input.errPath);
+    .replaceAll("{LABEL}", escapeXml(input.label))
+    .replaceAll("{NODE_PATH}", escapeXml(input.nodePath))
+    .replaceAll("{SCRIPT_PATH}", escapeXml(input.scriptPath))
+    .replaceAll("{WORKDIR}", escapeXml(input.workdir))
+    .replaceAll("{LOG_PATH}", escapeXml(input.logPath))
+    .replaceAll("{ERR_PATH}", escapeXml(input.errPath));
 }
 
 export interface GatherLauncherInput {
   label: string;
-  appPath: string;     // absolute, z.B. /Applications/GatherV2.app
-  debugPort: number;   // z.B. 9222
+  appPath: string; // absolute path, e.g. /Applications/GatherV2.app
+  debugPort: number; // 1024-65535
   logPath: string;
   errPath: string;
 }
@@ -113,23 +128,23 @@ const LAUNCHER_TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
 `;
 
 /**
- * renderGatherLauncherPlist — Plist für den GatherV2-Auto-Launcher.
+ * renderGatherLauncherPlist — Plist for the GatherV2 auto-launcher LaunchAgent.
  *
- * Anders als der Bridge-Plist:
- * - KEIN KeepAlive (App soll NICHT neu starten wenn der User sie selbst schließt)
- * - KEIN WorkingDirectory (irrelevant für `open -a`)
- * - Nutzt `/usr/bin/open` damit macOS die App regulär launcht (kein direktes Helper-Binary)
- * - `--args --remote-debugging-port=N` öffnet GatherV2 mit Chrome-DevTools-Endpoint
+ * Different from the bridge plist:
+ * - NO KeepAlive (when the user quits the app it should stay quit)
+ * - NO WorkingDirectory (irrelevant for `open -a`)
+ * - Uses `/usr/bin/open` so macOS launches the app normally (handles signing, sandbox, etc.)
+ * - `--args --remote-debugging-port=N` exposes the Chrome DevTools Protocol endpoint
  *
- * Verhalten: bei Login (RunAtLoad) startet GatherV2 EINMAL mit Debug-Port. Wird
- * die App vom User geschlossen, startet sie nicht wieder — der nächste Restart
- * passiert erst beim nächsten Login.
+ * Behavior: at login (RunAtLoad) GatherV2 starts ONCE with the debug port. If
+ * the user quits the app, it does NOT restart — the next launch happens at the
+ * next login (or via `launchctl kickstart -k`).
  */
 export function renderGatherLauncherPlist(input: GatherLauncherInput): string {
   return LAUNCHER_TEMPLATE
-    .replaceAll("{LABEL}", input.label)
-    .replaceAll("{APP_PATH}", input.appPath)
+    .replaceAll("{LABEL}", escapeXml(input.label))
+    .replaceAll("{APP_PATH}", escapeXml(input.appPath))
     .replaceAll("{DEBUG_PORT}", String(input.debugPort))
-    .replaceAll("{LOG_PATH}", input.logPath)
-    .replaceAll("{ERR_PATH}", input.errPath);
+    .replaceAll("{LOG_PATH}", escapeXml(input.logPath))
+    .replaceAll("{ERR_PATH}", escapeXml(input.errPath));
 }
