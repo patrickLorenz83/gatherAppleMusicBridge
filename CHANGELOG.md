@@ -63,5 +63,5 @@ First public release.
   AppleScript alone covers the original use-case; Last.fm added
   complexity without user value (no NepTunes scrobbler in the loop).
 
-[Unreleased]: https://github.com/patricklorenz/gatherAppleMusicBridge/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/patricklorenz/gatherAppleMusicBridge/releases/tag/v0.1.0
+[Unreleased]: https://github.com/patrickLorenz83/gatherAppleMusicBridge/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/patrickLorenz83/gatherAppleMusicBridge/releases/tag/v0.1.0

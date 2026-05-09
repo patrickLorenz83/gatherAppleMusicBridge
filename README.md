@@ -50,7 +50,7 @@ mutation.
 ## Quickstart
 
 ```bash
-git clone https://github.com/patricklorenz/gatherAppleMusicBridge.git
+git clone https://github.com/patrickLorenz83/gatherAppleMusicBridge.git
 cd gatherAppleMusicBridge
 npm install
 npm run install-daemon

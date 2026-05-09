@@ -5,13 +5,13 @@
   "type": "module",
   "license": "MIT",
   "author": "Patrick Lorenz",
-  "homepage": "https://github.com/patricklorenz/gatherAppleMusicBridge",
+  "homepage": "https://github.com/patrickLorenz83/gatherAppleMusicBridge",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/patricklorenz/gatherAppleMusicBridge.git"
+    "url": "git+https://github.com/patrickLorenz83/gatherAppleMusicBridge.git"
   },
   "bugs": {
-    "url": "https://github.com/patricklorenz/gatherAppleMusicBridge/issues"
+    "url": "https://github.com/patrickLorenz83/gatherAppleMusicBridge/issues"
   },
   "keywords": [
     "macos",
