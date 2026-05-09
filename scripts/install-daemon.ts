@@ -42,8 +42,20 @@ const LAUNCHER_LOG_PATH = path.join(HOME, "Library/Logs/gather-launcher.log");
 const LAUNCHER_ERR_PATH = path.join(HOME, "Library/Logs/gather-launcher.err");
 const SCRIPT_PATH = path.join(REPO_DIR, "dist/src/index.js");
 const DOMAIN = `gui/${os.userInfo().uid}`;
-const GATHER_APP_PATH = "/Applications/GatherV2.app";
-const DEBUG_PORT = Number(process.env.GATHER_CDP_PORT ?? 9222);
+const GATHER_APP_PATH = process.env.GATHER_APP_PATH ?? "/Applications/GatherV2.app";
+
+function parsePort(raw: string | undefined, defaultPort: number): number {
+  if (raw === undefined || raw === "") return defaultPort;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 65535) {
+    console.error(
+      `[install] Invalid GATHER_CDP_PORT="${raw}". Must be an integer 1-65535.`,
+    );
+    process.exit(1);
+  }
+  return n;
+}
+const DEBUG_PORT = parsePort(process.env.GATHER_CDP_PORT, 9222);
 
 function run(cmd: string, args: string[], { allowFailure = false } = {}): void {
   console.log(`[install] $ ${cmd} ${args.join(" ")}`);

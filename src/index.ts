@@ -75,8 +75,10 @@ async function main(): Promise<void> {
   log.info("[daemon] starting gatherAppleMusicBridge");
 
   const sink = new GatherSink({
-    port: Number(config.GATHER_CDP_PORT),
+    port: config.GATHER_CDP_PORT,
     pageUrlFilter: config.GATHER_PAGE_URL_FILTER,
+    appPath: config.GATHER_APP_PATH,
+    autoHeal: config.GATHER_AUTO_HEAL,
   });
   await sink.connect();
   log.info("[daemon] sink connected");
