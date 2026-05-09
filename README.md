@@ -34,13 +34,17 @@ Lokaler macOS-Daemon (Node.js und TypeScript), der den aktuell in Apple Music la
 
    Während des Installs erscheint einmalig ein macOS-Dialog "Terminal möchte Music steuern". Klick "OK", sonst kann der Daemon Apple Music nicht via AppleScript abfragen (siehe Troubleshooting).
 
-4. Fertig. Bei jedem Login startet die Bridge automatisch im Hintergrund.
+   **Wichtig:** Entferne `GatherV2` aus den macOS-Login-Items (Systemeinstellungen, Allgemein, Anmeldeobjekte), falls es dort eingetragen ist. Sonst startet GatherV2 zweimal: einmal ohne Debug-Flag durchs Login-Item, einmal mit Flag durch unseren LaunchAgent.
 
-## GatherV2 mit Debug-Flag starten
+4. Fertig. Bei jedem Login startet automatisch:
+   - **GatherV2** mit `--remote-debugging-port=9222` (über LaunchAgent `agency.deepr.gathervtwo-debug-launcher`)
+   - **Bridge-Daemon** im Hintergrund (über LaunchAgent `agency.deepr.gather-apple-music-bridge`)
 
-Die Bridge spricht ab Phase 5 nicht mehr das Gather-1.0-WebSocket-Protokoll, sondern steuert die lokal laufende GatherV2-Electron-App via Chrome-DevTools-Protocol (CDP). Voraussetzung dafür: die App muss mit dem Debug-Port-Flag gestartet sein.
+## CDP-Pfad (Gather 2.0)
 
-**Einmalige Test-Session:**
+Die Bridge spricht ab Phase 5 nicht mehr das Gather-1.0-WebSocket-Protokoll, sondern steuert die lokal laufende GatherV2-Electron-App via Chrome-DevTools-Protocol (CDP). Voraussetzung: die App läuft mit `--remote-debugging-port=9222`. Mit `npm run install-daemon` ist das nach jedem Login automatisch der Fall.
+
+**Manuelle Testsession** (z.B. ohne installierten Daemon):
 
 ```bash
 open -a GatherV2 --args --remote-debugging-port=9222
@@ -54,25 +58,32 @@ npm run check-cdp
 
 Erwartete Ausgabe: `✅ GatherV2-Page erreichbar: https://app.v2.gather.town/...`.
 
-**Persistente Lösung (empfohlen):** GatherV2 als Login-Item mit dem Flag eintragen. Aktuell out-of-scope der v1, manuell oder via separater Phase v2.1.
-
 **Wenn der Flag fehlt:** Der Daemon loggt beim ersten Tick `[gather] no GatherV2 page found at localhost:9222` und überspringt den Tick. Beim nächsten Tick (10s später) versucht er es erneut. Kein Crash.
 
 ## Daemon-Steuerung
 
+`npm run install-daemon` installiert zwei LaunchAgents:
+
+- **Bridge-Daemon** `agency.deepr.gather-apple-music-bridge` — die eigentliche Bridge (Polling-Loop und CDP-Sink)
+- **GatherV2-Launcher** `agency.deepr.gathervtwo-debug-launcher` — startet GatherV2 bei Login mit `--remote-debugging-port=9222`
+
 | Aktion | Befehl |
 |--------|--------|
-| Status | `launchctl print gui/$(id -u)/agency.deepr.gather-apple-music-bridge` |
-| Logs (live) | `tail -f ~/Library/Logs/gather-bridge.log` |
-| Errors (live) | `tail -f ~/Library/Logs/gather-bridge.err` |
-| Neustart | `launchctl kickstart -k gui/$(id -u)/agency.deepr.gather-apple-music-bridge` |
-| Stop | `launchctl bootout gui/$(id -u)/agency.deepr.gather-apple-music-bridge ~/Library/LaunchAgents/agency.deepr.gather-apple-music-bridge.plist` |
-| Deinstallieren | `npm run uninstall-daemon` |
+| Bridge-Status | `launchctl print gui/$(id -u)/agency.deepr.gather-apple-music-bridge` |
+| Bridge-Logs (live) | `tail -f ~/Library/Logs/gather-bridge.log` |
+| Bridge-Errors (live) | `tail -f ~/Library/Logs/gather-bridge.err` |
+| Bridge-Neustart (z.B. nach `.env`-Änderung) | `launchctl kickstart -k gui/$(id -u)/agency.deepr.gather-apple-music-bridge` |
+| Bridge-Stop | `launchctl bootout gui/$(id -u)/agency.deepr.gather-apple-music-bridge ~/Library/LaunchAgents/agency.deepr.gather-apple-music-bridge.plist` |
+| Launcher-Status | `launchctl print gui/$(id -u)/agency.deepr.gathervtwo-debug-launcher` |
+| Launcher-Logs | `tail -f ~/Library/Logs/gather-launcher.log` |
+| Beide deinstallieren | `npm run uninstall-daemon` |
 
 ## Logs
 
-- `~/Library/Logs/gather-bridge.log` ist stdout (pino-JSON)
-- `~/Library/Logs/gather-bridge.err` ist stderr (Crashes, AppleScript-Errors)
+- `~/Library/Logs/gather-bridge.log` ist Bridge-Daemon stdout (pino-JSON)
+- `~/Library/Logs/gather-bridge.err` ist Bridge-Daemon stderr (Crashes, AppleScript-Errors)
+- `~/Library/Logs/gather-launcher.log` ist GatherV2-Auto-Launcher stdout (üblicherweise leer)
+- `~/Library/Logs/gather-launcher.err` ist GatherV2-Auto-Launcher stderr
 
 Pretty-Print:
 
