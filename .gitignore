@@ -19,3 +19,8 @@ logs/
 .vscode/
 .idea/
 *.swp
+
+# AI / planning artifacts — local only, GSD workflow state
+.planning/
+CLAUDE.md
+REVIEW.md
