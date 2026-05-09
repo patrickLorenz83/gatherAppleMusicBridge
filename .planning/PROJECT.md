@@ -1,8 +1,14 @@
 # gatherAppleMusicBridge
 
+## Current State
+
+**v1.0 SHIPPED 2026-05-09** ✅ — Bridge läuft als macOS-Background-Daemon und pusht Apple-Music-Tracks in den GatherV2-Custom-Status (Format `🎧 Artist – Track`). Live-verifiziert mit AppleScript-Source und Chrome-DevTools-Protocol-Sink gegen die lokale GatherV2-Electron-App. Auto-Heal triggert bei Spotlight-Start ohne Debug-Flag.
+
+Archiv: `.planning/milestones/v1.0-ROADMAP.md`, `v1.0-REQUIREMENTS.md`, `v1.0-MILESTONE-AUDIT.md`.
+
 ## What This Is
 
-Ein lokaler macOS-Background-Daemon (Node.js/TypeScript), der den aktuell in Apple Music laufenden Track in den Gather-Status schreibt. Da Apple Music keinen "now playing"-Endpoint anbietet, holt die Bridge die Live-Daten primär aus Last.fm (gespeist durch NepTunes als Scrobbler) und nutzt AppleScript gegen Music.app als Fallback. Single-User-Tool für Patrick Lorenz, das die fehlende Apple-Music-Integration in Gather kompensiert.
+Ein lokaler macOS-Background-Daemon (Node.js/TypeScript), der den aktuell in Apple Music laufenden Track in den Gather-Status schreibt. Da Apple Music keinen "now playing"-Endpoint anbietet, nutzt die Bridge AppleScript gegen Music.app, und schreibt das Ergebnis via Chrome-DevTools-Protocol in die lokal laufende GatherV2-Electron-App.
 
 ## Core Value
 
