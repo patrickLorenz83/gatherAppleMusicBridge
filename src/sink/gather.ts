@@ -82,7 +82,7 @@ export class GatherSink {
     //   `track\nwith\nnewlines` -> "track\nwith\nnewlines"
     // Ohne Stringify wäre der setCustomStatus-Call eine Code-Injection-Lücke
     // im Renderer-Kontext.
-    const emojiLiteral = JSON.stringify("🎵");
+    const emojiLiteral = JSON.stringify("🎧");
     const textLiteral = JSON.stringify(`${np.artist} – ${np.track}`);
     const expr =
       `gatherDev.Repos.gameSpace.currentSpaceUser.setCustomStatus({` +

@@ -7,7 +7,7 @@
  *
  * Ablauf:
  * 1. Pre-Flight (`sink.connect()`) — sucht GatherV2-Page auf localhost:9222.
- * 2. setStatus(`{artist:"Daft Punk", track:"Around the World"}`) — zeigt 🎵 + Text.
+ * 2. setStatus(`{artist:"Daft Punk", track:"Around the World"}`) — zeigt 🎧 + Text.
  * 3. 10s warten — User verifiziert visuell im GatherV2-UI.
  * 4. clearStatus() — UI-Status verschwindet.
  * 5. 2s warten — User verifiziert leeren Status.
@@ -35,7 +35,7 @@ async function main() {
   await sink.connect();
   log.info({ connected: sink.connected }, "[test-sink] CDP page found, ready");
 
-  log.info("[test-sink] setting status: 🎵 Daft Punk – Around the World");
+  log.info("[test-sink] setting status: 🎧 Daft Punk – Around the World");
   await sink.setStatus({ artist: "Daft Punk", track: "Around the World" });
 
   log.info(
