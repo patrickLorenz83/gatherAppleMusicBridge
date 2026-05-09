@@ -143,3 +143,24 @@ Keine neuen Threat-Surface-Elemente außerhalb des Plan-Threat-Models. `spawnSyn
 - Commit `549ce31` — vorhanden in `git log` ✓
 - Commit `85b1987` — vorhanden in `git log` ✓
 - Commit `9be4f1a` — vorhanden in `git log` ✓
+
+---
+
+## Post-Phase-5 Erweiterung (2026-05-09): GatherV2-Auto-Launcher
+
+Out-of-Plan, aber technisch zwingend für CDP-Pfad: ohne Auto-Start mit `--remote-debugging-port=9222` wäre die Bridge nach Reboot nutzlos.
+
+**Was hinzugekommen ist:**
+
+- `scripts/lib/plist.ts:79-135` — neue Funktion `renderGatherLauncherPlist({label, appPath, debugPort, logPath, errPath})`. Anders als das Bridge-Plist: kein KeepAlive (App-Quit durch User soll nicht restarten), kein WorkingDirectory, nutzt `/usr/bin/open` mit `--args`-Flag.
+- `scripts/install-daemon.ts:118-134` (step 7/7) — installiert das zweite Plist `agency.deepr.gathervtwo-debug-launcher.plist` parallel zum Bridge-Daemon.
+- `scripts/uninstall-daemon.ts:60-61` — symmetrisches `bootout` + `unlink` für beide Plists.
+- `scripts/install-daemon.ts:41` — Bug-Fix: SCRIPT_PATH muss `dist/src/index.js` sein, nicht `dist/index.js` (mit `rootDir="."` baut tsc nach `dist/src/`).
+
+**Live verifiziert:** `launchctl print gui/501/agency.deepr.gathervtwo-debug-launcher` → Service registriert, `RunAtLoad: true`. Beim nächsten Login startet GatherV2 automatisch mit Debug-Flag, Bridge connected sofort.
+
+**User-Setup-Pflicht:** GatherV2 aus den macOS-Login-Items entfernen, sonst Doppel-Start.
+
+**Commits:**
+- `e1da2d9` `feat: install/uninstall second LaunchAgent that auto-starts GatherV2 with debug-port`
+- `e9ddf47` `fix(04): SCRIPT_PATH muss dist/src/index.js sein, nicht dist/index.js`

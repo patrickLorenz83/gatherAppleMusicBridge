@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-last_updated: "2026-05-08T22:25:00.000Z"
+status: complete
+last_updated: "2026-05-09T09:55:00.000Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 8
-  completed_plans: 7
-  percent: 88
+  completed_plans: 8
+  percent: 100
 ---
 
 # STATE: gatherAppleMusicBridge
 
-**Last updated:** 2026-05-08
+**Last updated:** 2026-05-09
 
 ## Project Reference
 
@@ -22,11 +22,12 @@ progress:
 - **Mode:** yolo
 - **Granularity:** coarse
 - **Total v1 requirements:** 27
-- **Total phases:** 4
+- **Total phases:** 5 (Phase 5 ergänzt nach Spike-Befund)
 
 ## Current Position
 
-- **Phase:** 5 (CDP-Bridge Refactor / Gather 2.0) — Plan 05-01 Code abgeschlossen, Task 9 (visuelle Verifikation gegen GatherV2) deferred als User-Action
+- **Phase:** v1.0 milestone-complete, ready to ship
+- **Plan:** alle 8 Plans abgeschlossen, alle Live-Tests durch
 - **Plan:** 05-01 abgeschlossen (CDP-Sink, Pre-Flight-Helper, Config-Refactor, Loop/Index-Compat, README).
 - **Status:** Phase-5-Code (Plan 05-01) 100% komplett. SINK-01..05 + CFG-01..02 unter neuer CDP-Implementierung erfüllt. `tsc --noEmit` clean. 8 atomic Commits. Task 9 (Smoke-Test gegen lebende GatherV2-App) ist User-Action: `open -a GatherV2 --args --remote-debugging-port=9222` + `npm run test:sink`. Plan 04-02 (launchd Real-System-Smoke-Test) bleibt als zweite User-Action stehen.
 - **Progress:** [█████████░] 88%

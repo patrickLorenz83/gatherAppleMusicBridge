@@ -269,3 +269,52 @@ Siehe README-Sektion "CDP nicht erreichbar oder GatherV2-Page nicht gefunden" so
 ---
 *Phase: 05-cdp-bridge-refactor*
 *Completed: 2026-05-08*
+
+---
+
+## Post-Phase-5 Erweiterungen (2026-05-09)
+
+Drei Out-of-Plan-Änderungen nach dem Phase-5-Smoke-Test, alle Live-Tests bestanden:
+
+### 1. Auto-Heal (~90 LOC, src/sink/gather.ts:175-279)
+
+Wenn der User GatherV2 manuell ohne Debug-Flag startet (Spotlight `Cmd+Space → "gather"`, Dock-Klick, Finder), erkennt die Bridge das (fetch-Fehler auf CDP-Port + `pgrep -x GatherV2 == 0`) und führt automatisch durch:
+
+1. graceful quit via `osascript 'tell application "GatherV2" to quit'` (max 5s)
+2. force-kill via `pkill -x GatherV2` falls graceful nicht reagiert
+3. relaunch via `open -a /Applications/GatherV2.app --args --remote-debugging-port=9222`
+4. warten bis CDP-Page UND `gatherDev` initialisiert sind (probeGatherDev-Loop, max 30s)
+
+Ohne `probeGatherDev` würde der erste Mutation-Versuch nach Relaunch mit `ReferenceError: gatherDev is not defined` failen — die CDP-Page existiert vor dem Bundle-Init.
+
+**Konfigurierbar:** `cfg.autoHeal: boolean` (default true), `cfg.appPath: string` (default `/Applications/GatherV2.app`).
+
+**Live verifiziert:** Spotlight-Start-Simulation → ~6s vom Track-Wechsel bis sichtbarer Status (4s davon `gatherDev`-Init).
+
+**Commit:** `35d1047` `feat: auto-heal — relaunch GatherV2 with debug-port if user started it without`
+
+### 2. Last.fm-Stack komplett entfernt
+
+User nutzt NepTunes nicht; Last.fm-Pfad ungenutzt. Entfernt:
+
+- `src/sources/lastfm.ts` (101 Zeilen) — gelöscht
+- `src/sources/chain.ts` — von 62 auf 25 Zeilen geschrumpft (kein Last.fm-Composer mehr)
+- `src/config.ts` — von 41 auf 18 Zeilen, Zod komplett raus, nur dotenv + process.env-Reads mit Defaults
+- `src/logger.ts` — Redact-Pfade von `*.GATHER_API_KEY`/`*.LASTFM_API_KEY` zu generisch (`*.apiKey`, `*.token`, `*.password`)
+- `scripts/test-sources.ts` — Last.fm-Sektion raus
+- `package.json` — `zod` deinstalliert
+- `.env.example` — Last.fm-Block raus, alle drei Felder optional
+
+**Live verifiziert:** Daemon kickstart, Status weiter funktional ("KATO & Jon - Turn the Lights Off").
+
+**Commit:** `676d998` `chore: Last.fm-Stack komplett entfernen, .env auf Optional reduzieren`
+
+### 3. UX-Verbesserungen
+
+- Status-Emoji `🎵` → `🎧` (User-Feedback nach Live-Test: Headphones signalisiert besser "hört aktiv zu")
+- `.env`-Datei komplett optional gemacht; `.env.example` reduziert auf drei optionale Override-Felder
+- README aktualisiert: GatherV2-Setup-Section reorganisiert, Auto-Heal dokumentiert, beide LaunchAgents in der Steuerungs-Tabelle, alle vier Log-Files erwähnt
+
+**Commits:**
+- `b3aca6f` `feat: switch status emoji from 🎵 to 🎧`
+- `732f3f0` `docs: README erklärt jetzt beide LaunchAgents (Bridge + GatherV2-Launcher)`

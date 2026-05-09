@@ -128,6 +128,24 @@ Reaktiv nach v1, basierend auf Live-Erfahrung.
 - Phase 3 (Polling-Loop und Daemon-Verdrahtung): 5 requirements (LOOP-01..05)
 - Phase 4 (launchd-Installation): 8 requirements (CFG-05, DMN-01..07)
 
+## v1 Final State (post-Phase-5 + Cleanup)
+
+Die ursprünglich in v1 definierten Requirements wurden funktional erfüllt — aber teils mit anderer Technologie als zur Roadmap-Erstellung angenommen. Phase 5 (CDP-Bridge Refactor) und der nachfolgende Cleanup haben mehrere Requirement-Texte technologie-mäßig überholt:
+
+| Requirement | Original | Final State (v1.0) |
+|-------------|----------|--------------------|
+| **SINK-01..05** | `@gathertown/gather-game-client@43` (WS, Gather 1.0) | Ersetzt durch CDP gegen GatherV2-Electron-App (`gatherDev.Repos.gameSpace.currentSpaceUser.setCustomStatus`). User-Outcome (Emoji + Text-Status sichtbar) erreicht. Hintergrund: Gather hat im September 2025 die v2-Plattform gelauncht; der alte WS-Client gibt 404 gegen `app.v2.gather.town`. |
+| **SRC-01** | Last.fm `getRecentTracks` mit `@attr.nowplaying`-Filter | **Gestrichen** post-Phase-5 (User nutzt NepTunes nicht). AppleScript reicht als alleinige Source. |
+| **CFG-01** | API-Keys als Pflicht in `.env` | Keine dieser Keys nötig. CDP-Pfad nutzt App-eigene Auth. `.env` ist komplett optional. |
+| **CFG-03** | Config-Loader mit Zod-Validation und `process.exit(0)` | Zod entfernt (kein Pflicht-Schema mehr nötig). Config sind reine `process.env`-Reads mit Defaults. |
+| **CFG-04** | Pino-Redaction für `GATHER_API_KEY`, `LASTFM_API_KEY` | Generischer (`*.apiKey`, `*.token`, etc.) — semantisch erfüllt. |
+
+### Zusätzliche v1-Funktionalität (Out-of-Roadmap)
+
+1. **GatherV2-Auto-Launcher** (Phase 4 Erweiterung): zweites LaunchAgent-Plist `agency.deepr.gathervtwo-debug-launcher` startet GatherV2 bei Login automatisch mit `--remote-debugging-port=9222`.
+2. **Auto-Heal** (Phase 5 Erweiterung): bei Spotlight-Start ohne Flag erkennt die Bridge das, killt App, restartet mit Flag, ~6s bis sichtbarer Status.
+3. **Cleanup**: Last.fm-Stack komplett raus (101 LOC + zod-Dep), Status-Emoji `🎵` → `🎧`, `.env` optional.
+
 ---
 *Requirements defined: 2026-05-08*
-*Last updated: 2026-05-08 after roadmap creation (traceability mapped to phases)*
+*Last updated: 2026-05-09 (final state post-Phase-5 + Cleanup, v1.0 milestone-complete)*
