@@ -1,46 +1,33 @@
 /**
- * Manuelles Smoke-Test-Script für Phase 2 Sources.
+ * Manuelles Smoke-Test-Script für die Now-Playing-Source.
  *
  * Aufruf: `npm run test:sources`
  *
- * Output: drei JSON-Sektionen für Last.fm, AppleScript, Chain — strukturiert
- * für visuelle Verifikation gegen echtes Apple Music + NepTunes.
+ * Ablauf: ruft `getAppleScriptState()` und `getNowPlaying()` und druckt
+ * beide Ergebnisse als JSON. Crasht nicht, wenn Music.app nicht läuft
+ * (state=null, np=null).
  *
- * Kein Crash, wenn:
- * - Music.app nicht läuft (AppleScript-Adapter liefert state=null)
- * - Last.fm-API-Key falsch (Adapter loggt + null)
- * - NepTunes nicht aktiv (Last.fm liefert null, AppleScript-Pfad greift)
- *
- * Verwendung für die Phase-2-Verifikation:
- * 1. Music.app pausieren → Chain muss null liefern (Authority-Test).
- * 2. Music.app spielen + NepTunes aktiv → Chain liefert Last.fm-Daten.
- * 3. Music.app spielen + NepTunes deaktiviert → Chain liefert AppleScript-Daten.
- * 4. Music.app komplett geschlossen → AppleScript state=null, Chain liefert
- *    Last.fm-Daten oder null. Music.app DARF NICHT durch das Script starten.
+ * Verifikation:
+ * 1. Music.app spielt → result zeigt {state:"playing", np:{artist,track}}
+ * 2. Music.app pausiert → result zeigt {state:"paused", np:null}, chain liefert null
+ * 3. Music.app komplett geschlossen → state=null, chain liefert null,
+ *    Music.app DARF NICHT durch das Script starten (Outer-Guard)
  */
 
 import { log } from "../src/logger.js";
-import { getLastFmNowPlaying } from "../src/sources/lastfm.js";
 import { getAppleScriptState } from "../src/sources/applescript.js";
 import { getNowPlaying } from "../src/sources/chain.js";
 
 async function main(): Promise<void> {
-  log.info("=== Phase 2 Source Smoke Test ===");
+  log.info("=== Source Smoke Test ===");
 
-  // 1. Last.fm pur
-  log.info("[1/3] Last.fm direkt …");
-  const lastfm = await getLastFmNowPlaying();
-  log.info({ result: lastfm }, "[1/3] Last.fm result");
-
-  // 2. AppleScript pur
-  log.info("[2/3] AppleScript direkt …");
+  log.info("[1/2] AppleScript direkt …");
   const apple = await getAppleScriptState();
-  log.info({ result: apple }, "[2/3] AppleScript result");
+  log.info({ result: apple }, "[1/2] AppleScript result");
 
-  // 3. Chain (Composer)
-  log.info("[3/3] Source-Chain (Composer) …");
+  log.info("[2/2] getNowPlaying (chain) …");
   const chain = await getNowPlaying();
-  log.info({ result: chain }, "[3/3] Chain result");
+  log.info({ result: chain }, "[2/2] Chain result");
 
   log.info("=== Done ===");
 }

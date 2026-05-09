@@ -6,8 +6,7 @@ Lokaler macOS-Daemon (Node.js und TypeScript), der den aktuell in Apple Music la
 
 - macOS (Apple Silicon oder Intel)
 - Node.js 22 LTS oder neuer (`node --version`)
-- Apple Music plus [NepTunes](https://micropixels.software/apps/neptunes) als Last.fm-Scrobbler
-- Last.fm-Account mit API-Key (optional, ohne Last.fm fällt der Daemon auf AppleScript-only zurück)
+- Apple Music (`Music.app`)
 - GatherV2-Desktop-App (`app.v2.gather.town`) installiert, Account-Login funktioniert
 
 ## Setup
@@ -18,13 +17,11 @@ Lokaler macOS-Daemon (Node.js und TypeScript), der den aktuell in Apple Music la
    npm install
    ```
 
-2. `.env`-Datei aus Vorlage erzeugen:
+2. Optional: `.env` anlegen, falls du Defaults überschreiben willst (Port, URL-Filter, Log-Level). Für 99 % der Fälle nicht nötig — Bridge läuft sofort:
 
    ```bash
-   cp .env.example .env
+   cp .env.example .env  # nur falls Override gewünscht
    ```
-
-   Optional: Last.fm-Vars (`LASTFM_API_KEY`, `LASTFM_USER`) eintragen, falls Last.fm als Now-Playing-Source genutzt werden soll. Ohne sie läuft der Daemon AppleScript-only. Beide Felder müssen entweder beide gesetzt oder beide leer sein.
 
 3. Daemon installieren (Build, launchd-Plist und TCC-Permission):
 
@@ -164,7 +161,7 @@ Vor Phase 5 zog der alte Gather-Game-Client alte axios- und protobufjs-Versionen
 ## Architektur
 
 - `src/index.ts` ist der Daemon-Entrypoint (Sink-Connect, Signal-Handler, Polling-Loop, Last-Word-Log)
-- `src/sources/` enthält Last.fm und AppleScript Now-Playing-Sources mit AppleScript als Authority für Play und Pause
+- `src/sources/` enthält den AppleScript-Adapter gegen Music.app mit Outer-Guard, plus dünnen Source-Composer in `chain.ts`
 - `src/sink/` enthält den CDP-Wrapper gegen die GatherV2-Electron-App (`setCustomStatus` und `clearCustomStatus` via Chrome-DevTools-Protocol)
 - `src/loop.ts` ist der 10s-Polling-Loop mit recursive `setTimeout`, AbortController und Track-Diff
 - `scripts/install-daemon.ts` generiert die launchd-Plist und spielt sie ein
